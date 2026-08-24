@@ -30,7 +30,7 @@ As developers and AI engineers, our codebases evolve every day — we ship featu
 ```
                                  ┌─────────────────────────────┐
                                  │     Active Git Repos        │
-                                 │ (FundersAI, TalentOS, etc.) │
+                                 │  (Local Codebases / Subtrees│
                                  └──────────────┬──────────────┘
                                                 │
                                                 ▼
@@ -89,7 +89,7 @@ cd git-resume-agent
 
 # Create virtual environment
 python -m venv .venv
-.venv\Scripts\activate      # Windows (or `source .venv/bin/activate` on Linux/macOS)
+.venv\Scriptsctivate      # Windows (or `source .venv/bin/activate` on Linux/macOS)
 
 # Install editable package
 pip install -e .
@@ -98,7 +98,7 @@ pip install -e .
 ### 2. Configure Environment (Optional LLM Keys)
 Copy `.env.example` to `.env`:
 ```env
-# Option A: Ollama Cloud (No download needed, uses flagship models)
+# Option A: Ollama Cloud (Uses flagship cloud models without local download)
 OLLAMA_BASE_URL=https://ollama.com
 OLLAMA_API_KEY=your_ollama_api_key
 
@@ -106,7 +106,7 @@ OLLAMA_API_KEY=your_ollama_api_key
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 
 # Option C: Google Gemini Free Endpoint
-GEMINI_API_KEY=AIzaSy...
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ---
@@ -129,17 +129,17 @@ git-resume scan
 Uses multi-agent reasoning over recent git commits to generate role-specific Google XYZ bullets:
 ```bash
 # Generate bullet for Forward-Deployed Engineer role
-git-resume generate --repo FundersAI --persona fde
+git-resume generate --repo MyProject --persona fde
 
 # Generate bullet for Generative AI Engineer role
-git-resume generate --repo TalentOS --persona genai
+git-resume generate --repo MyProject --persona genai
 
 # Generate bullet for AI/ML Engineer role
-git-resume generate --repo CareFlow --persona ai_engineer
+git-resume generate --repo MyProject --persona ai_engineer
 ```
 
 ### 4. Full End-to-End Multi-Agent Sync
-Runs the entire pipeline (Inspect $\rightarrow$ Synthesize $\rightarrow$ Verify $\rightarrow$ Compile `.docx` $\rightarrow$ Export `.pdf` $\rightarrow$ Sync to Portfolio):
+Runs the entire pipeline (Inspect $ightarrow$ Synthesize $ightarrow$ Verify $ightarrow$ Compile `.docx` $ightarrow$ Export `.pdf` $ightarrow$ Sync to Portfolio):
 ```bash
 git-resume sync
 ```
@@ -152,39 +152,39 @@ git-resume sync
 version: "1.0"
 
 developer:
-  name: "Naman Manocha"
-  email: "namanmanocha6019@gmail.com"
-  github: "https://github.com/Naman6019"
-  linkedin: "https://linkedin.com/in/naman-d-manocha"
-  location: "Mumbai, India"
+  name: "Your Name"
+  email: "your.email@example.com"
+  github: "https://github.com/yourusername"
+  linkedin: "https://linkedin.com/in/yourprofile"
+  location: "City, Country"
 
 repositories:
-  - name: "FundersAI"
-    path: "C:/Users/naman/OneDrive/Desktop/FundersAI"
+  - name: "EnterpriseAI"
+    path: "./projects/EnterpriseAI"
     tag: "OpenAI Build Week Submission"
-    primary_stack: ["Python", "FastAPI", "React", "TypeScript", "Vite", "TailwindCSS", "Qdrant", "PostgreSQL"]
+    primary_stack: ["Python", "FastAPI", "React", "TypeScript", "Qdrant", "PostgreSQL"]
 
-  - name: "TalentOS"
-    path: "C:/Users/naman/OneDrive/Desktop/ALLThingsAgentic"
-    tag: "All Things Agentic Hackathon (Taskmaster Track)"
+  - name: "AgentOS"
+    path: "./projects/AgentOS"
+    tag: "Hackathon Track Submission"
     primary_stack: ["Python", "Google ADK", "LangGraph", "Next.js", "Firestore", "Google Cloud Run"]
 
 personas:
   - id: "fde"
     title: "Agentic AI / Forward-Deployed Engineer"
-    resume_file: "Naman_Manocha_Agentic_AI_FDE_Resume.docx"
+    resume_file: "Your_Name_Agentic_AI_FDE_Resume.docx"
     emphasis: ["evals", "hybrid-search", "strict-abstention", "production-agents", "forward-deployed"]
 
   - id: "genai"
     title: "Generative AI Engineer"
-    resume_file: "Naman_Manocha_GenAI_Engineer_Resume.docx"
+    resume_file: "Your_Name_GenAI_Engineer_Resume.docx"
     emphasis: ["rag", "vector-embeddings", "langgraph", "llm-pipelines", "tool-calling"]
 
 output:
   formats: ["docx", "pdf"]
-  resume_dir: "C:/Users/naman/OneDrive/Desktop/Personal/Resume"
+  resume_dir: "./resumes"
   sync_paths:
-    - "C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site/public/resume"
+    - "./portfolio/public/resume"
 
 llm:
   provider: "ollama"
@@ -232,7 +232,4 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 ## 👤 Author
 
-**Naman Manocha**  
-* [GitHub (@Naman6019)](https://github.com/Naman6019)  
-* [LinkedIn](https://linkedin.com/in/naman-d-manocha)  
-* Email: namanmanocha6019@gmail.com
+**Naman Manocha** — [@Naman6019](https://github.com/Naman6019)
