@@ -1,44 +1,53 @@
 #!/usr/bin/env python
 """
-Helper to install Git post-commit hooks across all active project repositories.
+Helper to install Git post-commit hooks across all repositories configured in gitresume.yaml.
 """
 
 import os
 import sys
+from git_resume.config import load_config
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-DESKTOP = r"C:\Users\naman\OneDrive\Desktop"
-SYNC_SCRIPT = r"C:/Users/naman/OneDrive/Desktop/FundersAI/scripts/sync_resumes.py"
+def install_hooks(config_path: str = "gitresume.yaml"):
+    config = load_config(config_path)
 
-REPOS = [
-    os.path.join(DESKTOP, "FundersAI"),
-    os.path.join(DESKTOP, "ALLThingsAgentic"),
-    os.path.join(DESKTOP, "CareFlow Intelligence"),
-]
+    print("=" * 60)
+    print("🔧 INSTALLING GIT POST-COMMIT HOOKS FROM gitresume.yaml")
+    print("=" * 60)
 
-HOOK_CONTENT = f"""#!/bin/sh
-# Auto-sync resume statistics after commit
-python "{SYNC_SCRIPT}" || true
+    hook_content = """#!/bin/sh
+# GitResume AI: Auto-sync resume statistics after commit
+git-resume sync || python -m git_resume.cli sync || true
 """
 
-def install_hooks():
-    print("=" * 60)
-    print("🔧 INSTALLING GIT POST-COMMIT HOOKS")
-    print("=" * 60)
+    installed_count = 0
+    for repo in config.repositories:
+        repo_path = repo.path
+        git_dir = os.path.join(repo_path, ".git")
+        hooks_dir = os.path.join(git_dir, "hooks")
 
-    for repo in REPOS:
-        hooks_dir = os.path.join(repo, ".git", "hooks")
-        if os.path.exists(hooks_dir):
+        if os.path.exists(git_dir):
+            os.makedirs(hooks_dir, exist_ok=True)
             hook_path = os.path.join(hooks_dir, "post-commit")
+            
             with open(hook_path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(HOOK_CONTENT)
-            print(f"  ✓ Installed post-commit hook: {repo}")
-        else:
-            print(f"  ⚠ Skipped (no .git directory): {repo}")
+                f.write(hook_content)
 
-    print("\n✅ All Git post-commit hooks successfully installed!")
+            # Make executable on Unix / WSL if applicable
+            try:
+                os.chmod(hook_path, 0o755)
+            except Exception:
+                pass
+
+            print(f"  ✓ Installed hook for [{repo.name}]: {repo_path}")
+            installed_count += 1
+        else:
+            print(f"  ⚠ Skipped [{repo.name}] (no .git directory found at {repo_path})")
+
+    print(f"\n✅ Successfully installed post-commit hooks across {installed_count} repositories!")
 
 if __name__ == "__main__":
-    install_hooks()
+    cfg = sys.argv[1] if len(sys.argv) > 1 else "gitresume.yaml"
+    install_hooks(cfg)

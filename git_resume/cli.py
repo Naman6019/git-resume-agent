@@ -35,6 +35,36 @@ def auto_config(config_path: str = "gitresume.yaml"):
         console.print(f"[bold green]✓ {config_path} is already in sync with all repository READMEs and manifests.[/bold green]")
 
 @app.command()
+def install_hooks(config_path: str = "gitresume.yaml"):
+    """Install automated Git post-commit hooks across all repositories in gitresume.yaml."""
+    config = load_config(config_path)
+    console.print("[bold blue]🔧 Installing Git post-commit hooks...[/bold blue]")
+    
+    hook_content = """#!/bin/sh
+# GitResume AI: Auto-sync resume statistics after commit
+git-resume sync || python -m git_resume.cli sync || true
+"""
+    installed = 0
+    for repo in config.repositories:
+        git_dir = os.path.join(repo.path, ".git")
+        hooks_dir = os.path.join(git_dir, "hooks")
+        if os.path.exists(git_dir):
+            os.makedirs(hooks_dir, exist_ok=True)
+            hook_path = os.path.join(hooks_dir, "post-commit")
+            with open(hook_path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(hook_content)
+            try:
+                os.chmod(hook_path, 0o755)
+            except Exception:
+                pass
+            console.print(f"  * [green]✓ Installed hook for [{repo.name}][/green]: {repo.path}")
+            installed += 1
+        else:
+            console.print(f"  * [yellow]⚠ Skipped [{repo.name}] (no .git directory at {repo.path})[/yellow]")
+
+    console.print(f"[bold green]✅ Successfully installed hooks across {installed} repositories![/bold green]")
+
+@app.command()
 def scan(config_path: str = "gitresume.yaml", auto_update: bool = True):
     """Scan configured Git repositories and display real-time engineering metrics."""
     if auto_update:
@@ -76,7 +106,6 @@ def generate(
     config_path: str = "gitresume.yaml"
 ):
     """Autonomous Agentic Generation: Synthesizes a fresh, grounded bullet from recent git diffs."""
-    # Ensure config is auto-synced with latest README
     discoverer = SchemaDiscoverer()
     discoverer.auto_sync_yaml(config_path)
 
