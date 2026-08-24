@@ -1,0 +1,57 @@
+version: "1.0"
+
+developer:
+  name: "Naman Manocha"
+  email: "namanmanocha42248@gmail.com"
+  github: "Naman6019"
+  linkedin: "https://linkedin.com/in/namanmanocha"
+  location: "Kolkata, India"
+
+llm:
+  provider: "ollama"           # Options: ollama, openai, groq, anthropic
+  model: "qwen2.5-coder:7b"     # Local privacy-first default
+  fallback_model: "gpt-4o-mini"
+  temperature: 0.2
+
+repositories:
+  - name: "FundersAI"
+    path: "C:/Users/naman/OneDrive/Desktop/FundersAI"
+    tag: "OpenAI Build Week Submission"
+    primary_stack: ["Python", "FastAPI", "Next.js", "LangGraph", "Supabase", "Cloudflare R2"]
+    
+  - name: "TalentOS"
+    path: "C:/Users/naman/OneDrive/Desktop/ALLThingsAgentic"
+    tag: "All Things Agentic Hackathon (Taskmaster Track)"
+    primary_stack: ["Python", "Google ADK", "LangGraph", "Gemini", "Vertex AI", "Firestore"]
+
+  - name: "CareFlow"
+    path: "C:/Users/naman/OneDrive/Desktop/CareFlow Intelligence"
+    tag: "Clinical Research Intelligence"
+    primary_stack: ["Python", "FastAPI", "Next.js", "Unsloth", "Ollama"]
+
+personas:
+  - id: "fde"
+    title: "Agentic AI / Forward-Deployed Engineer"
+    resume_file: "Naman_Manocha_Agentic_AI_FDE_Resume.docx"
+    emphasis: ["multi-agent orchestration", "human-in-the-loop", "stakeholder delivery", "guardrails"]
+
+  - id: "genai"
+    title: "Generative AI Engineer"
+    resume_file: "Naman_Manocha_GenAI_Engineer_Resume.docx"
+    emphasis: ["grounded RAG", "abstention", "prompt engineering", "evals", "fine-tuning"]
+
+  - id: "ai_engineer"
+    title: "AI / ML Engineer"
+    resume_file: "Naman_Manocha_AI_Engineer_Resume.docx"
+    emphasis: ["applied ML", "clustering", "vector search", "full-stack systems"]
+
+  - id: "master"
+    title: "Master Comprehensive Resume"
+    resume_file: "Naman_Manocha_Master_Resume.docx"
+    emphasis: ["all"]
+
+output:
+  formats: ["docx", "pdf", "markdown", "jsonresume"]
+  resume_dir: "C:/Users/naman/OneDrive/Desktop/Personal/Resume"
+  sync_paths:
+    - "C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site/public/resume"
