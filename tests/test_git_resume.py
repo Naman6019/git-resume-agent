@@ -4,6 +4,7 @@ from git_resume.config import load_config
 from git_resume.agents.inspector import InspectorAgent
 from git_resume.agents.verifier import GroundingVerifierAgent
 from git_resume.agents.synthesizer import SynthesizerAgent
+from git_resume.agents.schema_discoverer import SchemaDiscoverer
 
 def test_load_config():
     config = load_config('gitresume.yaml')
@@ -21,12 +22,21 @@ def test_inspector_agent():
 
 def test_grounding_verifier():
     verifier = GroundingVerifierAgent()
-    ground_truth = {'commits': 400, 'loc': 130000, 'stack': ['Python', 'FastAPI']}
-    assert verifier.verify_metrics({'commits': 350}, ground_truth) is True
-    assert verifier.verify_metrics({'commits': 450}, ground_truth) is False
+    ground_truth = {'loc_k': '130K', 'stack': ['Python', 'FastAPI']}
+    valid, msg = verifier.verify_bullet("Engineered system with 130K lines of code.", ground_truth)
+    assert valid is True
+    invalid, msg = verifier.verify_bullet("Engineered system with 900K lines of code.", ground_truth)
+    assert invalid is False
 
 def test_synthesizer_agent():
     synthesizer = SynthesizerAgent()
     bullet = synthesizer.synthesize_fundersai({'loc_k': '145K', 'files': 760, 'commits': 402, 'test_suites': 120})
     assert '145K lines of code' in bullet
     assert 'OpenAI Build Week' in bullet
+
+def test_schema_discoverer():
+    discoverer = SchemaDiscoverer()
+    funders_meta = discoverer.discover_repo_metadata(r"C:\Users\naman\OneDrive\Desktop\FundersAI", "FundersAI")
+    assert "FastAPI" in funders_meta["primary_stack"]
+    assert "React" in funders_meta["primary_stack"] or "Python" in funders_meta["primary_stack"]
+    assert funders_meta["tag"] == "OpenAI Build Week Submission"

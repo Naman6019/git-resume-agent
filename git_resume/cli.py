@@ -10,6 +10,7 @@ from git_resume.config import load_config
 from git_resume.agents.inspector import InspectorAgent
 from git_resume.agents.synthesizer import SynthesizerAgent
 from git_resume.agents.verifier import GroundingVerifierAgent
+from git_resume.agents.schema_discoverer import SchemaDiscoverer
 from git_resume.compilers.docx_compiler import DocxCompiler
 from git_resume.compilers.pdf_compiler import PdfCompiler
 from git_resume.utils.llm_client import LLMClient
@@ -21,8 +22,29 @@ app = typer.Typer(help="GitResume AI — Autonomous Multi-Agent Resume & Portfol
 console = Console()
 
 @app.command()
-def scan(config_path: str = "gitresume.yaml"):
+def auto_config(config_path: str = "gitresume.yaml"):
+    """Auto-discover project tracks, tags, and tech stack from README.md & manifests, updating gitresume.yaml."""
+    discoverer = SchemaDiscoverer()
+    console.print(f"[bold blue]🔍 Scanning repository READMEs and manifests for schema changes...[/bold blue]")
+    updated, changes = discoverer.auto_sync_yaml(config_path)
+    if updated:
+        console.print(f"[bold green]✓ Auto-synced {config_path} successfully with repository changes:[/bold green]")
+        for change in changes:
+            console.print(f"  * [yellow]{change}[/yellow]")
+    else:
+        console.print(f"[bold green]✓ {config_path} is already in sync with all repository READMEs and manifests.[/bold green]")
+
+@app.command()
+def scan(config_path: str = "gitresume.yaml", auto_update: bool = True):
     """Scan configured Git repositories and display real-time engineering metrics."""
+    if auto_update:
+        discoverer = SchemaDiscoverer()
+        updated, changes = discoverer.auto_sync_yaml(config_path)
+        if updated:
+            console.print(f"[bold yellow]⚡ Auto-updated {config_path} from README changes:[/bold yellow]")
+            for c in changes:
+                console.print(f"  * {c}")
+
     config = load_config(config_path)
     inspector = InspectorAgent()
     
@@ -54,6 +76,10 @@ def generate(
     config_path: str = "gitresume.yaml"
 ):
     """Autonomous Agentic Generation: Synthesizes a fresh, grounded bullet from recent git diffs."""
+    # Ensure config is auto-synced with latest README
+    discoverer = SchemaDiscoverer()
+    discoverer.auto_sync_yaml(config_path)
+
     config = load_config(config_path)
     inspector = InspectorAgent()
     llm = LLMClient(provider=config.llm.provider, model=config.llm.model, fallback_model=config.llm.fallback_model)
@@ -79,7 +105,7 @@ def generate(
 
     # 3. Display
     status_badge = "[bold green][VERIFIED GROUNDED][/bold green]" if result["verified"] else "[bold yellow][UNVERIFIED][/bold yellow]"
-    panel_body = f"[bold white]{result['bullet']}[/bold white]\n\n{status_badge} [dim]{result['verification_note']}[/dim]"
+    panel_body = f"[bold white]{result['bullet']}[/bold white]\\n\\n{status_badge} [dim]{result['verification_note']}[/dim]"
     
     console.print("=" * 60)
     console.print(Panel(
@@ -89,8 +115,16 @@ def generate(
     ))
 
 @app.command()
-def sync(config_path: str = "gitresume.yaml"):
+def sync(config_path: str = "gitresume.yaml", auto_update: bool = True):
     """Run the end-to-end multi-agent pipeline: Inspect -> Synthesize -> Verify -> Compile -> Sync."""
+    if auto_update:
+        discoverer = SchemaDiscoverer()
+        updated, changes = discoverer.auto_sync_yaml(config_path)
+        if updated:
+            console.print(f"[bold yellow]⚡ Auto-synced {config_path} with repository READMEs:[/bold yellow]")
+            for c in changes:
+                console.print(f"  * {c}")
+
     console.print("[bold blue]Starting GitResume Multi-Agent Sync...[/bold blue]")
     config = load_config(config_path)
     inspector = InspectorAgent()
