@@ -80,6 +80,20 @@ As developers and AI engineers, our codebases evolve every day — we ship featu
 
 ---
 
+## 📂 Where Generated Resumes Are Stored & Synced
+
+GitResume AI manages a dual-tier storage system defined in your `gitresume.yaml`:
+
+### 1. Primary Master Directory (`output.resume_dir`)
+* The primary folder where your master `.docx` templates and compiled `.pdf` files are stored.
+* Keeps all role-specific persona documents organized (e.g. `Forward_Deployed_Engineer.docx`, `GenAI_Engineer.docx`, `AI_Engineer.docx`, `Master_Resume.docx`).
+
+### 2. Public Web / Portfolio Sync (`output.sync_paths`)
+* Mirrors compiled `.docx` and `.pdf` files directly to your live portfolio website (e.g. `./portfolio_site/public/resume`), static site generator public folders, or CDN buckets.
+* Every time you run `git-resume sync` (or make a git commit), your live portfolio immediately serves the freshest resumes.
+
+---
+
 ## ⚡ Quickstart & Installation
 
 ### 1. Clone & Install
@@ -119,13 +133,19 @@ Inspects configured repositories and syncs newly added tech tools or hackathon t
 git-resume auto-config
 ```
 
-### 2. Live Codebase Intelligence Dashboard
+### 2. Install Zero-Touch Git Post-Commit Hooks
+Automatically wires up post-commit hooks across all repositories listed in `gitresume.yaml`:
+```bash
+git-resume install-hooks
+```
+
+### 3. Live Codebase Intelligence Dashboard
 Displays real-time commit counts, file statistics, total lines of code, and test suites across all tracked repositories:
 ```bash
 git-resume scan
 ```
 
-### 3. Synthesize Grounded Achievement Bullets
+### 4. Synthesize Grounded Achievement Bullets
 Uses multi-agent reasoning over recent git commits to generate role-specific Google XYZ bullets:
 ```bash
 # Generate bullet for Forward-Deployed Engineer role
@@ -138,7 +158,7 @@ git-resume generate --repo MyProject --persona genai
 git-resume generate --repo MyProject --persona ai_engineer
 ```
 
-### 4. Full End-to-End Multi-Agent Sync
+### 5. Full End-to-End Multi-Agent Sync
 Runs the entire pipeline (Inspect $\rightarrow$ Synthesize $\rightarrow$ Verify $\rightarrow$ Compile `.docx` $\rightarrow$ Export `.pdf` $\rightarrow$ Sync to Portfolio):
 ```bash
 git-resume sync
@@ -158,6 +178,7 @@ developer:
   linkedin: "https://linkedin.com/in/yourprofile"
   location: "City, Country"
 
+# Repositories to inspect & ground
 repositories:
   - name: "EnterpriseAI"
     path: "./projects/EnterpriseAI"
@@ -169,6 +190,7 @@ repositories:
     tag: "Hackathon Track Submission"
     primary_stack: ["Python", "Google ADK", "LangGraph", "Next.js", "Firestore", "Google Cloud Run"]
 
+# Resume Personas & Target Documents
 personas:
   - id: "fde"
     title: "Agentic AI / Forward-Deployed Engineer"
@@ -180,12 +202,14 @@ personas:
     resume_file: "Your_Name_GenAI_Engineer_Resume.docx"
     emphasis: ["rag", "vector-embeddings", "langgraph", "llm-pipelines", "tool-calling"]
 
+# Dual-Tier Storage & Compilation Targets
 output:
   formats: ["docx", "pdf"]
-  resume_dir: "./resumes"
+  resume_dir: "./resumes"                     # Master storage directory
   sync_paths:
-    - "./portfolio/public/resume"
+    - "./portfolio_site/public/resume"        # Public portfolio sync destination
 
+# LLM Intelligence Engine
 llm:
   provider: "ollama"
   model: "kimi-k2.7-code"
@@ -196,13 +220,22 @@ llm:
 
 ## 🪝 Zero-Touch Git Hook Integration
 
-To automatically sync your resume every time you make a commit in your project repositories, install the post-commit hook:
+How does the automation work on every commit?
+When you run `git-resume install-hooks` (or `python scripts/install_hooks.py`):
+1. It reads your configured repository paths in `gitresume.yaml`.
+2. Locates each repository's `.git/hooks/` folder.
+3. Installs an executable `post-commit` script that triggers `git-resume sync` in the background upon every commit.
 
 ```bash
-python scripts/install_hooks.py
+git-resume install-hooks
 ```
-
-This creates `.git/hooks/post-commit` in each repository, triggering background inspection and compilation upon every `git commit`.
+*Output:*
+```
+🔧 Installing Git post-commit hooks...
+  * ✓ Installed hook for [EnterpriseAI]: ./projects/EnterpriseAI
+  * ✓ Installed hook for [AgentOS]: ./projects/AgentOS
+✅ Successfully installed hooks across 2 repositories!
+```
 
 ---
 
