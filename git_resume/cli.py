@@ -4,12 +4,15 @@ import sys
 import typer
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
 
 from git_resume.config import load_config
 from git_resume.agents.inspector import InspectorAgent
 from git_resume.agents.synthesizer import SynthesizerAgent
+from git_resume.agents.verifier import GroundingVerifierAgent
 from git_resume.compilers.docx_compiler import DocxCompiler
 from git_resume.compilers.pdf_compiler import PdfCompiler
+from git_resume.utils.llm_client import LLMClient
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -43,6 +46,47 @@ def scan(config_path: str = "gitresume.yaml"):
         )
 
     console.print(table)
+
+@app.command()
+def generate(
+    repo: str = typer.Option("FundersAI", help="Repository name to analyze"),
+    persona: str = typer.Option("fde", help="Target persona ID (fde, genai, ai_engineer)"),
+    config_path: str = "gitresume.yaml"
+):
+    """Autonomous Agentic Generation: Synthesizes a fresh, grounded bullet from recent git diffs."""
+    config = load_config(config_path)
+    inspector = InspectorAgent()
+    llm = LLMClient(provider=config.llm.provider, model=config.llm.model, fallback_model=config.llm.fallback_model)
+    synthesizer = SynthesizerAgent(llm_client=llm)
+
+    target_repo = next((r for r in config.repositories if r.name.lower() == repo.lower()), None)
+    if not target_repo:
+        console.print(f"[red]Error: Repository '{repo}' not found in {config_path}[/red]")
+        raise typer.Exit(1)
+
+    target_persona = next((p for p in config.personas if p.id.lower() == persona.lower()), None)
+    emphasis = target_persona.emphasis if target_persona else ["full-stack", "architecture"]
+
+    console.print(f"[bold blue]Multi-Agent Analysis for [cyan]{target_repo.name}[/cyan] (Persona: [yellow]{persona}[/yellow])...[/bold blue]")
+    
+    # 1. Inspect
+    repo_data = inspector.inspect_repo(target_repo)
+    console.print(f"  * Inspected {repo_data['commits']} commits, {repo_data['files']} files, {repo_data['loc']:,} LOC")
+
+    # 2. Synthesize with LLM
+    console.print("  * Synthesizer Agent reasoning over git commits & AST diffs...")
+    result = synthesizer.generate_ai_bullet(repo_data, emphasis)
+
+    # 3. Display
+    status_badge = "[bold green][VERIFIED GROUNDED][/bold green]" if result["verified"] else "[bold yellow][UNVERIFIED][/bold yellow]"
+    panel_body = f"[bold white]{result['bullet']}[/bold white]\n\n{status_badge} [dim]{result['verification_note']}[/dim]"
+    
+    console.print("=" * 60)
+    console.print(Panel(
+        panel_body,
+        title=f"Generated Achievement for {target_repo.name} ({target_persona.title if target_persona else persona})",
+        border_style="green" if result["verified"] else "yellow"
+    ))
 
 @app.command()
 def sync(config_path: str = "gitresume.yaml"):
