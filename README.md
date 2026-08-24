@@ -89,7 +89,7 @@ cd git-resume-agent
 
 # Create virtual environment
 python -m venv .venv
-.venv\Scriptsctivate      # Windows (or `source .venv/bin/activate` on Linux/macOS)
+.venv\Scripts\activate      # Windows (or `source .venv/bin/activate` on Linux/macOS)
 
 # Install editable package
 pip install -e .
@@ -139,7 +139,7 @@ git-resume generate --repo MyProject --persona ai_engineer
 ```
 
 ### 4. Full End-to-End Multi-Agent Sync
-Runs the entire pipeline (Inspect $ightarrow$ Synthesize $ightarrow$ Verify $ightarrow$ Compile `.docx` $ightarrow$ Export `.pdf` $ightarrow$ Sync to Portfolio):
+Runs the entire pipeline (Inspect $\rightarrow$ Synthesize $\rightarrow$ Verify $\rightarrow$ Compile `.docx` $\rightarrow$ Export `.pdf` $\rightarrow$ Sync to Portfolio):
 ```bash
 git-resume sync
 ```
