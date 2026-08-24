@@ -1,5 +1,6 @@
 # GitResume Agent 🚀
 
+[![PyPI](https://img.shields.io/pypi/v/git-resume-agent.svg)](https://pypi.org/project/git-resume-agent/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![CLI](https://img.shields.io/badge/CLI-Typer%20%26%20Rich-magenta.svg)](https://typer.tiangolo.com/)
 [![Multi--Agent](https://img.shields.io/badge/Architecture-Autonomous%20Agentic%20Pipeline-orange.svg)](https://github.com/Naman6019/git-resume-agent)
@@ -87,6 +88,14 @@ GitResume Agent manages a dual-tier storage system defined in your `gitresume.ya
 
 ## ⚡ Quickstart & Installation
 
+### 1. Install via PyPI (Recommended)
+```bash
+pip install git-resume-agent
+```
+
+<details>
+<summary><b>Or install from source (for contributors)</b></summary>
+
 ### 1. Clone & Install
 ```bash
 git clone https://github.com/Naman6019/git-resume-agent.git
@@ -99,6 +108,8 @@ python -m venv .venv
 # Install editable package
 pip install -e .
 ```
+
+</details>
 
 ### 2. Configure Environment (Optional LLM Keys)
 Copy `.env.example` to `.env`:
