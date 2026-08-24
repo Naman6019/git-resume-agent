@@ -3,18 +3,91 @@ import json
 import httpx
 from typing import Optional
 
-class LLMClient:
-    """Unified LLM interface supporting local Ollama, OpenAI, and Groq with graceful fallback."""
+def load_local_env():
+    """Reads .env file from current directory or parent directories if present."""
+    paths = [
+        ".env",
+        os.path.join(os.path.dirname(__file__), "..", "..", ".env"),
+        r"C:\Users\naman\OneDrive\Desktop\FundersAI\.env",
+        r"C:\Users\naman\OneDrive\Desktop\ALLThingsAgentic\.env"
+    ]
+    for env_path in paths:
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, "r", encoding="utf-8", errors="ignore") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            k, v = k.strip(), v.strip().strip('"').strip("'")
+                            if k not in os.environ:
+                                os.environ[k] = v
+            except Exception:
+                pass
 
-    def __init__(self, provider: str = "ollama", model: str = "qwen2.5-coder:7b", fallback_model: str = "gpt-4o-mini"):
+load_local_env()
+
+class LLMClient:
+    """Unified LLM interface supporting Google Gemini (Free Tier), Ollama, Groq, and OpenAI."""
+
+    def __init__(self, provider: str = "gemini", model: str = "gemini-2.0-flash", fallback_model: str = "gpt-4o-mini"):
         self.provider = provider.lower()
         self.model = model
         self.fallback_model = fallback_model
-        self.openai_api_key = os.environ.get("OPENAI_API_KEY")
+        self.gemini_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         self.groq_api_key = os.environ.get("GROQ_API_KEY")
+        self.openai_api_key = os.environ.get("OPENAI_API_KEY")
+        self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
 
     def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        # 1. Try Ollama (Local privacy-first)
+        # 1. Google Gemini (Free Endpoint)
+        if self.gemini_api_key and (self.provider in ["gemini", "google"] or "gemini" in self.model):
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.gemini_api_key}"
+                payload = {
+                    "contents": [
+                        {"role": "user", "parts": [{"text": prompt}]}
+                    ],
+                    "generationConfig": {
+                        "temperature": 0.2
+                    }
+                }
+                if system_prompt:
+                    payload["system_instruction"] = {
+                        "parts": [{"text": system_prompt}]
+                    }
+
+                response = httpx.post(url, json=payload, timeout=20.0)
+                if response.status_code == 200:
+                    data = response.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            return parts[0].get("text", "").strip()
+            except Exception:
+                pass
+
+        # 2. Groq (Free fast inference)
+        if self.groq_api_key and (self.provider == "groq" or not self.gemini_api_key):
+            try:
+                from openai import OpenAI
+                client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=self.groq_api_key)
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+
+                res = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=messages,
+                    temperature=0.2
+                )
+                return res.choices[0].message.content.strip()
+            except Exception:
+                pass
+
+        # 3. Local Ollama
         if self.provider == "ollama":
             try:
                 response = httpx.post(
@@ -36,7 +109,7 @@ class LLMClient:
             except Exception:
                 pass
 
-        # 2. Try OpenAI API
+        # 4. OpenAI API
         if self.openai_api_key:
             try:
                 from openai import OpenAI
@@ -55,26 +128,7 @@ class LLMClient:
             except Exception:
                 pass
 
-        # 3. Try Groq API
-        if self.groq_api_key:
-            try:
-                from openai import OpenAI
-                client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=self.groq_api_key)
-                messages = []
-                if system_prompt:
-                    messages.append({"role": "system", "content": system_prompt})
-                messages.append({"role": "user", "content": prompt})
-
-                res = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=messages,
-                    temperature=0.2
-                )
-                return res.choices[0].message.content.strip()
-            except Exception:
-                pass
-
-        # 4. Fallback Rule-Based Synthesis (Offline zero-dependency)
+        # 5. Deterministic fallback
         return self._heuristic_synthesis(prompt)
 
     def _heuristic_synthesis(self, prompt: str) -> str:

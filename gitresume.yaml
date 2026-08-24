@@ -8,8 +8,8 @@ developer:
   location: "Kolkata, India"
 
 llm:
-  provider: "ollama"           # Options: ollama, openai, groq, anthropic
-  model: "qwen2.5-coder:7b"     # Local privacy-first default
+  provider: "gemini"           # Options: ollama, openai, groq, anthropic
+  model: "gemini-2.0-flash"     # Local privacy-first default
   fallback_model: "gpt-4o-mini"
   temperature: 0.2
 
