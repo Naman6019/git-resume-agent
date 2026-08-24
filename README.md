@@ -1,4 +1,4 @@
-# GitResume AI 🚀
+# GitResume Agent 🚀
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![CLI](https://img.shields.io/badge/CLI-Typer%20%26%20Rich-magenta.svg)](https://typer.tiangolo.com/)
@@ -12,11 +12,11 @@
 
 ---
 
-## 💡 Why GitResume AI?
+## 💡 Why GitResume Agent?
 
 As software and AI engineers, our codebases evolve every day — we ship features, refactor parsers, optimize vector retrieval latencies, and increase test coverage. Yet, our resumes remain static, outdated, and ungrounded.
 
-**GitResume AI** automates the entire lifecycle of engineering credentials as an event-driven CI/CD system:
+**GitResume Agent** automates the entire lifecycle of engineering credentials as an event-driven CI/CD system:
 1. **Perception**: Interrogates active Git repositories (commits, lines of code, test suites, and AST diffs) in < 5ms.
 2. **Schema Discovery**: Dynamically detects tech stack additions and hackathon track changes from `README.md` files and package manifests, updating configuration in-place.
 3. **Reasoned Synthesis**: Synthesizes quantified achievement bullets following the **Google XYZ formula** (*"Accomplished X, measured by Y, by doing Z"*).
@@ -27,7 +27,7 @@ As software and AI engineers, our codebases evolve every day — we ship feature
 
 ## 🤖 Truly Autonomous: How It Works
 
-GitResume AI operates on an **event-driven, zero-touch autonomy loop**:
+GitResume Agent operates on an **event-driven, zero-touch autonomy loop**:
 
 ```
                        ┌─────────────────────────────────────┐
@@ -73,7 +73,7 @@ GitResume AI operates on an **event-driven, zero-touch autonomy loop**:
 
 ## 📂 Where Generated Resumes Are Stored & Synced
 
-GitResume AI manages a dual-tier storage system defined in your `gitresume.yaml`:
+GitResume Agent manages a dual-tier storage system defined in your `gitresume.yaml`:
 
 ### 1. Primary Master Directory (`output.resume_dir`)
 * The primary folder where your master `.docx` templates and compiled `.pdf` files are stored.
