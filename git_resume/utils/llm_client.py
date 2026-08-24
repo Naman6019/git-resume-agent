@@ -9,7 +9,8 @@ def load_local_env():
         ".env",
         os.path.join(os.path.dirname(__file__), "..", "..", ".env"),
         r"C:\Users\naman\OneDrive\Desktop\FundersAI\.env",
-        r"C:\Users\naman\OneDrive\Desktop\ALLThingsAgentic\.env"
+        r"C:\Users\naman\OneDrive\Desktop\ALLThingsAgentic\.env",
+        r"C:\Users\naman\OneDrive\Desktop\CareFlow Intelligence\.env"
     ]
     for env_path in paths:
         if os.path.exists(env_path):
@@ -28,48 +29,80 @@ def load_local_env():
 load_local_env()
 
 class LLMClient:
-    """Unified LLM interface supporting Google Gemini (Free Tier), Ollama, Groq, and OpenAI."""
+    """Unified LLM interface supporting Local Ollama, OpenRouter, Groq, Gemini, and OpenAI."""
 
-    def __init__(self, provider: str = "gemini", model: str = "gemini-2.0-flash", fallback_model: str = "gpt-4o-mini"):
+    def __init__(self, provider: str = "ollama", model: str = "qwen2.5-coder:1.5b", fallback_model: str = "gpt-4o-mini"):
         self.provider = provider.lower()
         self.model = model
         self.fallback_model = fallback_model
-        self.gemini_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-        self.groq_api_key = os.environ.get("GROQ_API_KEY")
-        self.openai_api_key = os.environ.get("OPENAI_API_KEY")
+        
+        # Keys & URLs
+        self.ollama_base_url = os.environ.get("OLLAMA_BASE_URL") or os.environ.get("OLLAMA_HOST") or "http://127.0.0.1:11434"
+        self.ollama_api_key = os.environ.get("OLLAMA_API_KEY")
         self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+        self.groq_api_key = os.environ.get("GROQ_API_KEY")
+        self.gemini_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        self.openai_api_key = os.environ.get("OPENAI_API_KEY")
 
     def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        # 1. Google Gemini (Free Endpoint)
-        if self.gemini_api_key and (self.provider in ["gemini", "google"] or "gemini" in self.model):
+        # 1. Try Ollama (Local on 127.0.0.1:11434)
+        if self.provider == "ollama" or not (self.openrouter_api_key or self.groq_api_key or self.gemini_api_key):
+            # A. Try /api/chat
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.gemini_api_key}"
-                payload = {
-                    "contents": [
-                        {"role": "user", "parts": [{"text": prompt}]}
-                    ],
-                    "generationConfig": {
-                        "temperature": 0.2
-                    }
-                }
+                chat_url = f"{self.ollama_base_url.rstrip('/')}/api/chat"
+                messages = []
                 if system_prompt:
-                    payload["system_instruction"] = {
-                        "parts": [{"text": system_prompt}]
-                    }
-
-                response = httpx.post(url, json=payload, timeout=20.0)
-                if response.status_code == 200:
-                    data = response.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts:
-                            return parts[0].get("text", "").strip()
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+                
+                resp = httpx.post(
+                    chat_url,
+                    json={"model": self.model, "messages": messages, "stream": False, "options": {"temperature": 0.2}},
+                    timeout=30.0
+                )
+                if resp.status_code == 200:
+                    content = resp.json().get("message", {}).get("content", "").strip()
+                    if content:
+                        return content
             except Exception:
                 pass
 
-        # 2. Groq (Free fast inference)
-        if self.groq_api_key and (self.provider == "groq" or not self.gemini_api_key):
+            # B. Try /api/generate
+            try:
+                gen_url = f"{self.ollama_base_url.rstrip('/')}/api/generate"
+                resp = httpx.post(
+                    gen_url,
+                    json={"model": self.model, "prompt": prompt, "system": system_prompt or "", "stream": False, "options": {"temperature": 0.2}},
+                    timeout=30.0
+                )
+                if resp.status_code == 200:
+                    content = resp.json().get("response", "").strip()
+                    if content:
+                        return content
+            except Exception:
+                pass
+
+        # 2. Try OpenRouter (Free Open-Source Models)
+        if self.openrouter_api_key:
+            try:
+                from openai import OpenAI
+                client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=self.openrouter_api_key)
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+
+                res = client.chat.completions.create(
+                    model="qwen/qwen-2.5-coder-32b-instruct:free",
+                    messages=messages,
+                    temperature=0.2
+                )
+                return res.choices[0].message.content.strip()
+            except Exception:
+                pass
+
+        # 3. Try Groq
+        if self.groq_api_key:
             try:
                 from openai import OpenAI
                 client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=self.groq_api_key)
@@ -87,48 +120,28 @@ class LLMClient:
             except Exception:
                 pass
 
-        # 3. Local Ollama
-        if self.provider == "ollama":
+        # 4. Try Google Gemini
+        if self.gemini_api_key:
             try:
-                response = httpx.post(
-                    "http://localhost:11434/api/generate",
-                    json={
-                        "model": self.model,
-                        "prompt": prompt,
-                        "system": system_prompt or "You are an elite Applied AI and Systems Engineer.",
-                        "stream": False,
-                        "options": {"temperature": 0.2}
-                    },
-                    timeout=15.0
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    res = data.get("response", "").strip()
-                    if res:
-                        return res
-            except Exception:
-                pass
-
-        # 4. OpenAI API
-        if self.openai_api_key:
-            try:
-                from openai import OpenAI
-                client = OpenAI(api_key=self.openai_api_key)
-                messages = []
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.gemini_api_key}"
+                payload = {
+                    "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.2}
+                }
                 if system_prompt:
-                    messages.append({"role": "system", "content": system_prompt})
-                messages.append({"role": "user", "content": prompt})
+                    payload["system_instruction"] = {"parts": [{"text": system_prompt}]}
 
-                res = client.chat.completions.create(
-                    model=self.fallback_model or "gpt-4o-mini",
-                    messages=messages,
-                    temperature=0.2
-                )
-                return res.choices[0].message.content.strip()
+                response = httpx.post(url, json=payload, timeout=20.0)
+                if response.status_code == 200:
+                    candidates = response.json().get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            return parts[0].get("text", "").strip()
             except Exception:
                 pass
 
-        # 5. Deterministic fallback
+        # 5. Deterministic Fallback
         return self._heuristic_synthesis(prompt)
 
     def _heuristic_synthesis(self, prompt: str) -> str:

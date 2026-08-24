@@ -2,56 +2,59 @@ version: "1.0"
 
 developer:
   name: "Naman Manocha"
-  email: "namanmanocha42248@gmail.com"
-  github: "Naman6019"
+  email: "namanmanocha6019@gmail.com"
+  github: "https://github.com/Naman6019"
   linkedin: "https://linkedin.com/in/namanmanocha"
-  location: "Kolkata, India"
+  location: "Mumbai, India"
 
-llm:
-  provider: "gemini"           # Options: ollama, openai, groq, anthropic
-  model: "gemini-2.0-flash"     # Local privacy-first default
-  fallback_model: "gpt-4o-mini"
-  temperature: 0.2
-
+# Repositories to inspect & ground
 repositories:
   - name: "FundersAI"
     path: "C:/Users/naman/OneDrive/Desktop/FundersAI"
     tag: "OpenAI Build Week Submission"
-    primary_stack: ["Python", "FastAPI", "Next.js", "LangGraph", "Supabase", "Cloudflare R2"]
-    
+    primary_stack: ["Python", "FastAPI", "React", "TypeScript", "Vite", "TailwindCSS", "Qdrant", "PostgreSQL"]
+
   - name: "TalentOS"
     path: "C:/Users/naman/OneDrive/Desktop/ALLThingsAgentic"
     tag: "All Things Agentic Hackathon (Taskmaster Track)"
-    primary_stack: ["Python", "Google ADK", "LangGraph", "Gemini", "Vertex AI", "Firestore"]
+    primary_stack: ["Python", "Google ADK", "LangGraph", "Next.js", "Firestore", "Google Cloud Run"]
 
   - name: "CareFlow"
     path: "C:/Users/naman/OneDrive/Desktop/CareFlow Intelligence"
     tag: "Clinical Research Intelligence"
-    primary_stack: ["Python", "FastAPI", "Next.js", "Unsloth", "Ollama"]
+    primary_stack: ["Python", "FastAPI", "Next.js", "TypeScript", "PostgreSQL", "ChromaDB"]
 
+# Resume Personas & Target Documents
 personas:
   - id: "fde"
     title: "Agentic AI / Forward-Deployed Engineer"
     resume_file: "Naman_Manocha_Agentic_AI_FDE_Resume.docx"
-    emphasis: ["multi-agent orchestration", "human-in-the-loop", "stakeholder delivery", "guardrails"]
+    emphasis: ["evals", "hybrid-search", "strict-abstention", "production-agents", "forward-deployed"]
 
   - id: "genai"
     title: "Generative AI Engineer"
     resume_file: "Naman_Manocha_GenAI_Engineer_Resume.docx"
-    emphasis: ["grounded RAG", "abstention", "prompt engineering", "evals", "fine-tuning"]
+    emphasis: ["rag", "vector-embeddings", "langgraph", "llm-pipelines", "tool-calling"]
 
   - id: "ai_engineer"
     title: "AI / ML Engineer"
     resume_file: "Naman_Manocha_AI_Engineer_Resume.docx"
-    emphasis: ["applied ML", "clustering", "vector search", "full-stack systems"]
+    emphasis: ["mlops", "benchmarks", "latency-optimization", "fine-tuning", "rag-systems"]
 
   - id: "master"
     title: "Master Comprehensive Resume"
     resume_file: "Naman_Manocha_Master_Resume.docx"
-    emphasis: ["all"]
+    emphasis: ["full-stack", "distributed-systems", "ai-agents", "production-architecture"]
 
+# Compiler & Output Configuration
 output:
-  formats: ["docx", "pdf", "markdown", "jsonresume"]
+  formats: ["docx", "pdf"]
   resume_dir: "C:/Users/naman/OneDrive/Desktop/Personal/Resume"
   sync_paths:
     - "C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site/public/resume"
+
+# LLM Intelligence Engine (Local Qwen2.5 Coder)
+llm:
+  provider: "ollama"
+  model: "qwen2.5-coder:1.5b"
+  fallback_model: "gpt-4o-mini"
