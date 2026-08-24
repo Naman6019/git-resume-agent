@@ -9,8 +9,7 @@ def load_local_env():
         ".env",
         os.path.join(os.path.dirname(__file__), "..", "..", ".env"),
         r"C:\Users\naman\OneDrive\Desktop\FundersAI\.env",
-        r"C:\Users\naman\OneDrive\Desktop\ALLThingsAgentic\.env",
-        r"C:\Users\naman\OneDrive\Desktop\CareFlow Intelligence\.env"
+        r"C:\Users\naman\OneDrive\Desktop\ALLThingsAgentic\.env"
     ]
     for env_path in paths:
         if os.path.exists(env_path):
@@ -29,24 +28,32 @@ def load_local_env():
 load_local_env()
 
 class LLMClient:
-    """Unified LLM interface supporting Local Ollama, OpenRouter, Groq, Gemini, and OpenAI."""
+    """Unified LLM interface supporting Ollama Cloud / Local, Gemini, OpenRouter, Groq, and OpenAI."""
 
-    def __init__(self, provider: str = "ollama", model: str = "qwen2.5-coder:1.5b", fallback_model: str = "gpt-4o-mini"):
+    def __init__(self, provider: str = "ollama", model: str = "kimi-k2.7-code", fallback_model: str = "gpt-4o-mini"):
         self.provider = provider.lower()
         self.model = model
         self.fallback_model = fallback_model
         
         # Keys & URLs
-        self.ollama_base_url = os.environ.get("OLLAMA_BASE_URL") or os.environ.get("OLLAMA_HOST") or "http://127.0.0.1:11434"
         self.ollama_api_key = os.environ.get("OLLAMA_API_KEY")
+        if self.ollama_api_key:
+            self.ollama_base_url = os.environ.get("OLLAMA_BASE_URL") or "https://ollama.com"
+        else:
+            self.ollama_base_url = os.environ.get("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
+
         self.openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
         self.groq_api_key = os.environ.get("GROQ_API_KEY")
         self.gemini_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         self.openai_api_key = os.environ.get("OPENAI_API_KEY")
 
     def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        # 1. Try Ollama (Local on 127.0.0.1:11434)
-        if self.provider == "ollama" or not (self.openrouter_api_key or self.groq_api_key or self.gemini_api_key):
+        # 1. Ollama Cloud / Local
+        if self.provider == "ollama" or self.ollama_api_key:
+            headers = {"Content-Type": "application/json"}
+            if self.ollama_api_key:
+                headers["Authorization"] = f"Bearer {self.ollama_api_key}"
+
             # A. Try /api/chat
             try:
                 chat_url = f"{self.ollama_base_url.rstrip('/')}/api/chat"
@@ -54,10 +61,11 @@ class LLMClient:
                 if system_prompt:
                     messages.append({"role": "system", "content": system_prompt})
                 messages.append({"role": "user", "content": prompt})
-                
+
                 resp = httpx.post(
                     chat_url,
                     json={"model": self.model, "messages": messages, "stream": False, "options": {"temperature": 0.2}},
+                    headers=headers,
                     timeout=30.0
                 )
                 if resp.status_code == 200:
@@ -73,6 +81,7 @@ class LLMClient:
                 resp = httpx.post(
                     gen_url,
                     json={"model": self.model, "prompt": prompt, "system": system_prompt or "", "stream": False, "options": {"temperature": 0.2}},
+                    headers=headers,
                     timeout=30.0
                 )
                 if resp.status_code == 200:
@@ -82,45 +91,7 @@ class LLMClient:
             except Exception:
                 pass
 
-        # 2. Try OpenRouter (Free Open-Source Models)
-        if self.openrouter_api_key:
-            try:
-                from openai import OpenAI
-                client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=self.openrouter_api_key)
-                messages = []
-                if system_prompt:
-                    messages.append({"role": "system", "content": system_prompt})
-                messages.append({"role": "user", "content": prompt})
-
-                res = client.chat.completions.create(
-                    model="qwen/qwen-2.5-coder-32b-instruct:free",
-                    messages=messages,
-                    temperature=0.2
-                )
-                return res.choices[0].message.content.strip()
-            except Exception:
-                pass
-
-        # 3. Try Groq
-        if self.groq_api_key:
-            try:
-                from openai import OpenAI
-                client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=self.groq_api_key)
-                messages = []
-                if system_prompt:
-                    messages.append({"role": "system", "content": system_prompt})
-                messages.append({"role": "user", "content": prompt})
-
-                res = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=messages,
-                    temperature=0.2
-                )
-                return res.choices[0].message.content.strip()
-            except Exception:
-                pass
-
-        # 4. Try Google Gemini
+        # 2. Try Google Gemini
         if self.gemini_api_key:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.gemini_api_key}"
@@ -141,7 +112,7 @@ class LLMClient:
             except Exception:
                 pass
 
-        # 5. Deterministic Fallback
+        # 3. Fallback Heuristic
         return self._heuristic_synthesis(prompt)
 
     def _heuristic_synthesis(self, prompt: str) -> str:
