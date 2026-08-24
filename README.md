@@ -2,74 +2,65 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![CLI](https://img.shields.io/badge/CLI-Typer%20%26%20Rich-magenta.svg)](https://typer.tiangolo.com/)
-[![Multi--Agent](https://img.shields.io/badge/Architecture-Multi--Agent%20Pipeline-orange.svg)](https://github.com/Naman6019/git-resume-agent)
+[![Multi--Agent](https://img.shields.io/badge/Architecture-Autonomous%20Agentic%20Pipeline-orange.svg)](https://github.com/Naman6019/git-resume-agent)
 [![Ollama](https://img.shields.io/badge/LLM-Ollama%20Cloud%20%7C%20Local-purple.svg)](https://ollama.com)
 [![Tests](https://img.shields.io/badge/Tests-5%2F5%20Passing-brightgreen.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Autonomous Multi-Agent Resume & Portfolio Intelligence Engine**  
-> *Grounding your engineering resume directly in your active Git commit history, AST diffs, and codebase metrics — with zero hallucinations.*
+> **Autonomous Git-Driven Resume & Portfolio Agent**  
+> *A zero-touch agentic pipeline that perceives git diffs and codebase ASTs upon commit, synthesizes grounded Google XYZ accomplishment bullets with adversarial critique, and autonomously compiles role-tailored resumes directly to production portfolio endpoints.*
 
 ---
 
 ## 💡 Why GitResume AI?
 
-As developers and AI engineers, our codebases evolve every day — we ship features, refactor parsers, optimize vector retrieval latencies, and increase test coverage. Yet, our resumes remain static, outdated, and ungrounded.
+As software and AI engineers, our codebases evolve every day — we ship features, refactor parsers, optimize vector retrieval latencies, and increase test coverage. Yet, our resumes remain static, outdated, and ungrounded.
 
-**GitResume AI** automates the entire lifecycle of engineering credentials:
-1. **Perceives** live git repositories (commits, lines of code, test suites, and AST diffs).
-2. **Discovers** tech stack changes and hackathon tracks dynamically from repository `README.md` files and package manifests.
-3. **Synthesizes** quantified achievement bullets following the **Google XYZ formula** (*"Accomplished X, measured by Y, by doing Z"*).
-4. **Verifies** every claim against the codebase to prevent hallucinations.
-5. **Compiles & Syncs** role-tailored Word (`.docx`) and headless PDF resumes directly to your public portfolio website.
+**GitResume AI** automates the entire lifecycle of engineering credentials as an event-driven CI/CD system:
+1. **Perception**: Interrogates active Git repositories (commits, lines of code, test suites, and AST diffs) in < 5ms.
+2. **Schema Discovery**: Dynamically detects tech stack additions and hackathon track changes from `README.md` files and package manifests, updating configuration in-place.
+3. **Reasoned Synthesis**: Synthesizes quantified achievement bullets following the **Google XYZ formula** (*"Accomplished X, measured by Y, by doing Z"*).
+4. **Adversarial Critique**: Validates every cited metric and library against the commit AST to mathematically eliminate hallucinations.
+5. **Multi-Format Execution & Sync**: Injects fresh bullets into Word (`.docx`) runs preserving exact styling, exports headless PDFs via COM automation, and syncs directly to your live portfolio website.
+
+---
+
+## 🤖 Truly Autonomous: How It Works
+
+GitResume AI operates on an **event-driven, zero-touch autonomy loop**:
+
+```
+                       ┌─────────────────────────────────────┐
+                       │           DEVELOPER ACTION          │
+                       │          `git commit -m "..."`      │
+                       └──────────────────┬──────────────────┘
+                                          │
+                                          ▼ (Post-Commit Hook Trigger)
+ ┌──────────────────────────────────────────────────────────────────────────────────┐
+ │                          AUTONOMOUS AGENT PIPELINE                               │
+ │                                                                                  │
+ │  1. PERCEPTION           2. SCHEMA DISCOVERY      3. REASONING & SYNTHESIS       │
+ │  ┌──────────────────┐    ┌──────────────────┐    ┌───────────────────────────┐   │
+ │  │ InspectorAgent   │───▶│ SchemaDiscoverer │───▶│ SynthesizerAgent          │   │
+ │  │ Git Log / AST    │    │ README & Badges  │    │ Flagship Ollama Cloud LLM │   │
+ │  └──────────────────┘    └──────────────────┘    └─────────────┬─────────────┘   │
+ │                                                                │                 │
+ │                                                                ▼                 │
+ │  5. DUAL-TIER SYNC       4. COMPILATION           4. ADVERSARIAL CRITIQUE        │
+ │  ┌──────────────────┐    ┌──────────────────┐    ┌───────────────────────────┐   │
+ │  │ Portfolio / Web  │◀───│ Docx & PDF Engine│◀───│ GroundingVerifierAgent    │   │
+ │  │ Public Mirroring │    │ Headless Word COM│    │ AST / Metric Verification │   │
+ │  └──────────────────┘    └──────────────────┘    └───────────────────────────┘   │
+ └──────────────────────────────────────────────────────────────────────────────────┘
+```
+
+* **Zero-Touch Git Hooks**: Once installed, you never need to manually trigger compilation. Committing to any project repository automatically initiates background resume updates.
+* **In-Place Schema Auto-Sync**: Adding a new framework to `package.json` or a hackathon badge to `README.md` automatically mutates `gitresume.yaml` idempotently.
+* **Deterministic Guardrails**: Human governance controls initial role personas and target paths, while multi-agent execution handles perception, critique, and artifact compilation.
 
 ---
 
 ## 🏗️ Multi-Agent Architecture
-
-```
-                                 ┌─────────────────────────────┐
-                                 │     Active Git Repos        │
-                                 │  (Local Codebases / Subtrees│
-                                 └──────────────┬──────────────┘
-                                                │
-                                                ▼
- ┌───────────────────────────┐    ┌───────────────────────────┐
- │ 1. SCHEMA DISCOVERER AGENT│───▶│    gitresume.yaml Config  │
- │  * Scans READMEs & Badges │    │ (Tags, Stack, Personas)   │
- │  * Detects Manifest Deps  │    └─────────────┬─────────────┘
- └───────────────────────────┘                  │
-                                                ▼
-                                  ┌───────────────────────────┐
-                                  │   2. INSPECTOR AGENT      │
-                                  │  * Scans Commit History   │
-                                  │  * Computes LOC & Tests   │
-                                  │  * Extracts AST Diffs     │
-                                  └─────────────┬─────────────┘
-                                                │
-                                                ▼
-                                  ┌───────────────────────────┐
-                                  │  3. SYNTHESIZER AGENT     │
-                                  │  * Ollama Cloud / Local   │
-                                  │  * Google XYZ Formula     │
-                                  │  * Role-Specific Framing  │
-                                  └─────────────┬─────────────┘
-                                                │
-                                                ▼
-                                  ┌───────────────────────────┐
-                                  │ 4. GROUNDING VERIFIER     │
-                                  │  * Anti-Hallucination     │
-                                  │  * Codebase Cross-Check   │
-                                  └─────────────┬─────────────┘
-                                                │
-                                                ▼
-                                  ┌───────────────────────────┐
-                                  │  5. COMPILERS & SYNC      │
-                                  │  * MS Word (.docx) Runs   │
-                                  │  * Headless COM PDF       │
-                                  │  * Portfolio Auto-Sync    │
-                                  └───────────────────────────┘
-```
 
 ### Agent Roles:
 * **SchemaDiscoverer Agent**: Parses project `README.md` files, badges, and manifests (`package.json`, `pyproject.toml`, `requirements.txt`). When you add a tool or win a hackathon track, it updates `gitresume.yaml` in-place.
