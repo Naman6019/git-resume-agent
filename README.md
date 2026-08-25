@@ -127,44 +127,136 @@ GEMINI_API_KEY=your_gemini_api_key
 
 ---
 
-## 🕹️ CLI Usage
+## 🕹️ CLI Usage & Core Workflows
 
-### 1. Auto-Discover Schema from READMEs
-Inspects configured repositories and syncs newly added tech tools or hackathon tags into `gitresume.yaml`:
+### 1. Live Codebase Intelligence Dashboard
+Displays real-time commit counts, file statistics, total lines of code, test suites, and deployment status across all tracked repositories:
+```bash
+git-resume scan
+```
+*Output:*
+```
+                     GitResume Live Codebase Intelligence                      
+┌───────────┬───────────────────────────┬──────────────────────────────────┬─────────┬───────┬───────────┬─────────────┐
+│ Repos     │ Tag / Track               │ Status & Links                   │ Commits │ Files │ Total LOC │ Test Suites │
+├───────────┼───────────────────────────┼──────────────────────────────────┼─────────┼───────┼───────────┼─────────────┤
+│ FundersAI │ OpenAI Build Week         │ ● Deployed (https://www.fund...  │     410 │   752 │   132,449 │         142 │
+│           │                           │ https://github.com/...           │         │       │           │             │
+│ TalentOS  │ All Things Agentic        │ ● Deployed (https://all-thin...  │      56 │   130 │    22,348 │          26 │
+│           │                           │ https://github.com/...           │         │       │           │             │
+│ CareFlow  │ Clinical Research         │ ○ In-Repo                        │       3 │    77 │    10,410 │           7 │
+│           │                           │ https://github.com/...           │         │       │           │             │
+│ GitResume │ Autonomous Multi-Agent... │ ○ In-Repo                        │      17 │    22 │     2,554 │           1 │
+│           │                           │ https://github.com/...           │         │       │           │             │
+└───────────┴───────────────────────────┴──────────────────────────────────┴─────────┴───────┴───────────┴─────────────┘
+```
+
+### 2. Auto-Discover Schema & Stack from READMEs
+Inspects configured repositories, sanitizes code blocks, discovers git origin remotes, and syncs newly added tech tools or hackathon tags into `gitresume.yaml`:
 ```bash
 git-resume auto-config
 ```
 
-### 2. Install Zero-Touch Git Post-Commit Hooks
-Automatically wires up post-commit hooks across all repositories listed in `gitresume.yaml`:
+### 3. Full End-to-End Multi-Agent Sync (All Projects at Once)
+Runs the entire multi-agent pipeline across all projects simultaneously (Inspect $\rightarrow$ Synthesize $\rightarrow$ Verify $\rightarrow$ Compile `.docx` with clickable hyperlinks $\rightarrow$ Export `.pdf` via Word COM $\rightarrow$ Sync to Portfolio):
 ```bash
-git-resume install-hooks
-```
-
-### 3. Live Codebase Intelligence Dashboard
-Displays real-time commit counts, file statistics, total lines of code, and test suites across all tracked repositories:
-```bash
-git-resume scan
+git-resume sync
 ```
 
 ### 4. Synthesize Grounded Achievement Bullets
 Uses multi-agent reasoning over recent git commits to generate role-specific Google XYZ bullets:
 ```bash
 # Generate bullet for Forward-Deployed Engineer role
-git-resume generate --repo MyProject --persona fde
+git-resume generate --repo FundersAI --persona fde
 
 # Generate bullet for Generative AI Engineer role
-git-resume generate --repo MyProject --persona genai
+git-resume generate --repo TalentOS --persona genai
 
 # Generate bullet for AI/ML Engineer role
-git-resume generate --repo MyProject --persona ai_engineer
+git-resume generate --repo CareFlow --persona ai_engineer
 ```
 
-### 5. Full End-to-End Multi-Agent Sync
-Runs the entire pipeline (Inspect $\rightarrow$ Synthesize $\rightarrow$ Verify $\rightarrow$ Compile `.docx` $\rightarrow$ Export `.pdf` $\rightarrow$ Sync to Portfolio):
+### 5. Install Zero-Touch Git Post-Commit Hooks
+Automatically wires up post-commit hooks across all repositories listed in `gitresume.yaml`:
+```bash
+git-resume install-hooks
+```
+
+---
+
+## ➕ How to Add a New Repository to GitResume
+
+Adding a new project to your resume pipeline takes less than 30 seconds:
+
+### Step 1: Add the Repository to `gitresume.yaml`
+Add an entry under the `repositories:` section:
+```yaml
+repositories:
+  - name: MyNewProject
+    path: C:/Users/yourusername/Desktop/MyNewProject
+    repo_url: https://github.com/yourusername/MyNewProject   # Or leave blank for auto-discovery
+    live_url: https://mynewproject.com                      # Optional (if deployed)
+    deployed: true                                          # Set to true if live, false if in-repo
+```
+
+### Step 2: Auto-Discover Schema & Tools
+Run `auto-config` to inspect the project's `README.md`, `package.json`, or `pyproject.toml` and populate tags and tools:
+```bash
+git-resume auto-config
+```
+
+### Step 3: Install Zero-Touch Git Hooks
+Ensure background auto-sync is triggered every time you make a commit in the new repo:
+```bash
+git-resume install-hooks
+```
+
+### Step 4: Re-Sync Resumes
 ```bash
 git-resume sync
 ```
+
+---
+
+## 📄 Managing Resume Length: 1-Page vs 2-Page Persona Strategy
+
+When you have 4+ active repositories, fitting everything onto a single page without overcrowding is a common challenge. GitResume supports **Persona-Driven Project Budgeting (Strategy A)**:
+
+```
+                                  MASTER PIPELINE
+                                         │
+                 ┌───────────────────────┴───────────────────────┐
+                 ▼                                               ▼
+     🎯 1-PAGE TARGETED RESUMES                      📑 2-PAGE MASTER RESUME
+    (fde, genai, ai_engineer)                               (master)
+ ┌───────────────────────────────┐               ┌───────────────────────────────┐
+ │ • 2 Flagship Projects (Full)  │               │ • All 4+ Projects (Full)      │
+ │   - FundersAI (3 bullets)     │               │   - FundersAI (4 bullets)     │
+ │   - TalentOS (3 bullets)      │               │   - TalentOS (3 bullets)      │
+ │ • Compact Secondary Projects  │               │   - CareFlow (3 bullets)      │
+ │   - CareFlow & GitResume      │               │   - GitResume (3 bullets)     │
+ │     (1-line in-repo links)    │               │                               │
+ └───────────────────────────────┘               └───────────────────────────────┘
+```
+
+### 1. Targeted 1-Page Resumes (`fde`, `genai`, `ai_engineer`)
+* **Flagship Focus**: Dedicate full multi-line accomplishment bullets to your top 2 relevant flagships (e.g. *FundersAI* and *TalentOS*).
+* **Secondary / In-Progress Aggregation**: Mention non-flagship projects (e.g. *CareFlow*, *GitResume*) as a single compact, high-impact bullet with clickable in-repo links (`Repo: github.com/...`).
+* **Bullet Count**: Maintain 3 bullets for primary work experience and 3 bullets per flagship project.
+
+### 2. Comprehensive 2-Page Master Resume (`master`)
+* **Full Coverage**: Dedicate full sections and 3–4 quantified bullets to every project in your portfolio (*FundersAI*, *TalentOS*, *CareFlow*, and *GitResume*).
+* **Deep Architecture**: Include full infrastructure breakdowns, CI/CD pipeline counts, and test suite metrics.
+
+---
+
+## 🔗 Clickable Native Word & PDF Hyperlinks
+
+GitResume Agent automatically embeds native Word OpenPackaging XML hyperlinks (`w:hyperlink` elements) into `.docx` documents:
+
+* **Deployed Projects**: Subheaders feature clickable **Live** and **Repo** links (e.g. `Live: www.fundersai.co.in | Repo: github.com/Naman6019/FundersAI`).
+* **Non-Deployed Projects**: Subheaders feature clickable **In-Repo** links (e.g. `Repo: github.com/Naman6019/CareFlow-Intelligence`).
+* **PDF Preservation**: When Word COM exports the `.pdf` during `git-resume sync`, all hyperlinks remain interactive across web browsers, PDF viewers, and ATS portals.
 
 ---
 
@@ -174,48 +266,124 @@ git-resume sync
 version: "1.0"
 
 developer:
-  name: "Your Name"
-  email: "your.email@example.com"
-  github: "https://github.com/yourusername"
-  linkedin: "https://linkedin.com/in/yourprofile"
-  location: "City, Country"
+  name: "Naman Manocha"
+  email: "namanmanocha6019@gmail.com"
+  github: "https://github.com/Naman6019"
+  linkedin: "https://linkedin.com/in/naman-d-manocha"
+  location: "Mumbai, India"
 
 # Repositories to inspect & ground
 repositories:
-  - name: "EnterpriseAI"
-    path: "./projects/EnterpriseAI"
-    tag: "OpenAI Build Week Submission"
-    primary_stack: ["Python", "FastAPI", "React", "TypeScript", "Qdrant", "PostgreSQL"]
+  - name: FundersAI
+    path: C:/Users/naman/OneDrive/Desktop/FundersAI
+    tag: OpenAI Build Week Submission
+    repo_url: https://github.com/Naman6019/FundersAI
+    live_url: https://www.fundersai.co.in
+    deployed: true
+    primary_stack:
+      - Python
+      - FastAPI
+      - React
+      - TypeScript
+      - Qdrant
+      - PostgreSQL
+      - Next.js
+      - LangGraph
 
-  - name: "AgentOS"
-    path: "./projects/AgentOS"
-    tag: "Hackathon Track Submission"
-    primary_stack: ["Python", "Google ADK", "LangGraph", "Next.js", "Firestore", "Google Cloud Run"]
+  - name: TalentOS
+    path: C:/Users/naman/OneDrive/Desktop/ALLThingsAgentic
+    tag: All Things Agentic Hackathon (Taskmaster Track)
+    repo_url: https://github.com/Naman6019/all-things-agentic
+    live_url: https://all-things-agentic--allthingsagentic-505213.asia-southeast1.hosted.app
+    deployed: true
+    primary_stack:
+      - Python
+      - Google ADK
+      - LangGraph
+      - Next.js
+      - Firestore
+      - Google Cloud Run
+
+  - name: CareFlow
+    path: C:/Users/naman/OneDrive/Desktop/CareFlow Intelligence
+    tag: Clinical Research Intelligence
+    repo_url: https://github.com/Naman6019/CareFlow-Intelligence
+    deployed: false
+    primary_stack:
+      - Python
+      - FastAPI
+      - Next.js
+      - TypeScript
+      - ChromaDB
+
+  - name: GitResume
+    path: C:/Users/naman/OneDrive/Desktop/resume_automation
+    tag: Autonomous Multi-Agent Resume & Portfolio Intelligence Engine
+    repo_url: https://github.com/Naman6019/git-resume-agent
+    deployed: false
+    primary_stack:
+      - Python
+      - Typer
+      - Rich
+      - Ollama
+      - Pytest
+      - python-docx
 
 # Resume Personas & Target Documents
 personas:
-  - id: "fde"
-    title: "Agentic AI / Forward-Deployed Engineer"
-    resume_file: "Your_Name_Agentic_AI_FDE_Resume.docx"
-    emphasis: ["evals", "hybrid-search", "strict-abstention", "production-agents", "forward-deployed"]
+  - id: fde
+    title: Agentic AI / Forward-Deployed Engineer (1 Page)
+    resume_file: Naman_Manocha_Agentic_AI_FDE_Resume.docx
+    emphasis:
+      - evals
+      - hybrid-search
+      - strict-abstention
+      - production-agents
+      - forward-deployed
 
-  - id: "genai"
-    title: "Generative AI Engineer"
-    resume_file: "Your_Name_GenAI_Engineer_Resume.docx"
-    emphasis: ["rag", "vector-embeddings", "langgraph", "llm-pipelines", "tool-calling"]
+  - id: genai
+    title: Generative AI Engineer (1 Page)
+    resume_file: Naman_Manocha_GenAI_Engineer_Resume.docx
+    emphasis:
+      - rag
+      - vector-embeddings
+      - langgraph
+      - llm-pipelines
+      - tool-calling
+
+  - id: ai_engineer
+    title: AI / ML Engineer (1 Page)
+    resume_file: Naman_Manocha_AI_Engineer_Resume.docx
+    emphasis:
+      - mlops
+      - benchmarks
+      - latency-optimization
+      - fine-tuning
+      - rag-systems
+
+  - id: master
+    title: Master Comprehensive Resume (2 Page)
+    resume_file: Naman_Manocha_Master_Resume.docx
+    emphasis:
+      - full-stack
+      - distributed-systems
+      - ai-agents
+      - production-architecture
 
 # Dual-Tier Storage & Compilation Targets
 output:
-  formats: ["docx", "pdf"]
-  resume_dir: "./resumes"                     # Master storage directory
+  formats:
+    - docx
+    - pdf
+  resume_dir: C:/Users/naman/OneDrive/Desktop/Personal/Resume
   sync_paths:
-    - "./portfolio_site/public/resume"        # Public portfolio sync destination
+    - C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site/public/resume
 
 # LLM Intelligence Engine
 llm:
-  provider: "ollama"
-  model: "kimi-k2.7-code"
-  fallback_model: "gpt-4o-mini"
+  provider: ollama
+  model: kimi-k2.7-code
+  fallback_model: gpt-4o-mini
 ```
 
 ---
