@@ -11,6 +11,21 @@ def test_load_config():
     assert config.developer.name == 'Naman Manocha'
     assert len(config.repositories) >= 2
     assert len(config.personas) >= 3
+    
+    # Check link properties on repositories
+    funders = next(r for r in config.repositories if r.name == 'FundersAI')
+    assert funders.is_deployed is True
+    assert funders.live_url == 'https://www.fundersai.co.in'
+    assert funders.repo_url == 'https://github.com/Naman6019/FundersAI'
+    assert "Live: https://www.fundersai.co.in" in funders.formatted_links
+    assert "Repo: https://github.com/Naman6019/FundersAI" in funders.formatted_links
+
+    careflow = next((r for r in config.repositories if r.name == 'CareFlow'), None)
+    if careflow:
+        assert careflow.is_deployed is False
+        assert careflow.repo_url == 'https://github.com/Naman6019/CareFlow-Intelligence'
+        assert "Repo: https://github.com/Naman6019/CareFlow-Intelligence" in careflow.formatted_links
+        assert "Live:" not in careflow.formatted_links
 
 def test_inspector_agent():
     inspector = InspectorAgent()
@@ -19,6 +34,9 @@ def test_inspector_agent():
     assert 'FundersAI' in stats
     assert stats['FundersAI']['commits'] > 0
     assert stats['FundersAI']['loc'] > 0
+    assert 'repo_url' in stats['FundersAI']
+    assert 'deployed' in stats['FundersAI']
+    assert 'formatted_links' in stats['FundersAI']
 
 def test_grounding_verifier():
     verifier = GroundingVerifierAgent()
@@ -40,3 +58,6 @@ def test_schema_discoverer():
     assert "FastAPI" in funders_meta["primary_stack"]
     assert "React" in funders_meta["primary_stack"] or "Python" in funders_meta["primary_stack"]
     assert funders_meta["tag"] == "OpenAI Build Week Submission"
+    assert funders_meta["live_url"] == "https://www.fundersai.co.in"
+    assert funders_meta["repo_url"] == "https://github.com/Naman6019/FundersAI"
+    assert funders_meta["deployed"] is True

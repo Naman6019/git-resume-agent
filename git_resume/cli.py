@@ -81,6 +81,7 @@ def scan(config_path: str = "gitresume.yaml", auto_update: bool = True):
     table = Table(title="GitResume Live Codebase Intelligence", show_header=True, header_style="bold magenta")
     table.add_column("Repository", style="bold cyan")
     table.add_column("Tag / Track", style="yellow")
+    table.add_column("Status & Links", style="cyan")
     table.add_column("Commits", justify="right")
     table.add_column("Files", justify="right")
     table.add_column("Total LOC", justify="right", style="green")
@@ -88,9 +89,25 @@ def scan(config_path: str = "gitresume.yaml", auto_update: bool = True):
 
     stats = inspector.inspect_all(config.repositories)
     for name, st in stats.items():
+        is_dep = st.get("deployed", False)
+        live = st.get("live_url")
+        repo = st.get("repo_url")
+        
+        status_lines = []
+        if is_dep and live:
+            status_lines.append(f"[green]● Deployed[/green] ({live})")
+        else:
+            status_lines.append("[yellow]○ In-Repo[/yellow]")
+            
+        if repo:
+            status_lines.append(f"[dim]{repo}[/dim]")
+            
+        links_display = "\n".join(status_lines) if status_lines else "[dim]No links[/dim]"
+
         table.add_row(
             name,
             str(st.get("tag", "")),
+            links_display,
             str(st.get("commits", 0)),
             str(st.get("files", 0)),
             f"{st.get('loc', 0):,}",
@@ -134,12 +151,14 @@ def generate(
 
     # 3. Display
     status_badge = "[bold green][VERIFIED GROUNDED][/bold green]" if result["verified"] else "[bold yellow][UNVERIFIED][/bold yellow]"
-    panel_body = f"[bold white]{result['bullet']}[/bold white]\\n\\n{status_badge} [dim]{result['verification_note']}[/dim]"
+    link_info = f"\n[cyan]{repo_data.get('formatted_links')}[/cyan]" if repo_data.get("formatted_links") else ""
+    panel_body = f"[bold white]{result['bullet']}[/bold white]{link_info}\n\n{status_badge} [dim]{result['verification_note']}[/dim]"
     
     console.print("=" * 60)
     console.print(Panel(
         panel_body,
         title=f"Generated Achievement for {target_repo.name} ({target_persona.title if target_persona else persona})",
+        subtitle=repo_data.get("formatted_links", ""),
         border_style="green" if result["verified"] else "yellow"
     ))
 
@@ -163,7 +182,8 @@ def sync(config_path: str = "gitresume.yaml", auto_update: bool = True):
     # 1. Inspect
     stats = inspector.inspect_all(config.repositories)
     for name, st in stats.items():
-        console.print(f"  * Inspected [cyan]{name}[/cyan]: {st['commits']} commits, {st['loc']:,} LOC, {st['test_suites']} test suites")
+        links_str = f" [{st.get('formatted_links')}]" if st.get("formatted_links") else ""
+        console.print(f"  * Inspected [cyan]{name}[/cyan]{links_str}: {st['commits']} commits, {st['loc']:,} LOC, {st['test_suites']} test suites")
 
     # 2. Update DOCX Personas
     console.print("[bold green]Updating Persona Resumes (.docx)...[/bold green]")

@@ -2,7 +2,7 @@ import os
 import subprocess
 from typing import Dict, Any, List
 from git_resume.config import RepoConfig
-from git_resume.utils.git_utils import get_git_stats, get_recent_commits
+from git_resume.utils.git_utils import get_git_stats, get_recent_commits, get_git_remote_url
 
 class InspectorAgent:
     """Scans Git repositories to extract active codebase metrics, diffs, and commit contexts."""
@@ -12,11 +12,27 @@ class InspectorAgent:
         recent_commits = get_recent_commits(repo.path, count=10)
         diff_summary = self.get_diff_summary(repo.path, count=5)
 
+        repo_url = repo.repo_url or get_git_remote_url(repo.path)
+        live_url = repo.live_url
+        is_deployed = repo.is_deployed
+
+        # Build formatted links
+        parts = []
+        if is_deployed and live_url:
+            parts.append(f"Live: {live_url}")
+        if repo_url:
+            parts.append(f"Repo: {repo_url}")
+        formatted_links = " | ".join(parts) if parts else ""
+
         return {
             "name": repo.name,
             "path": repo.path,
             "tag": repo.tag,
             "stack": repo.primary_stack,
+            "repo_url": repo_url,
+            "live_url": live_url,
+            "deployed": is_deployed,
+            "formatted_links": formatted_links,
             "commits": stats.get("commits", 0),
             "files": stats.get("files", 0),
             "loc": stats.get("loc", 0),

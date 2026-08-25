@@ -1,4 +1,4 @@
-version: '1.0'
+version: "1.0"
 developer:
   name: Naman Manocha
   email: namanmanocha6019@gmail.com
@@ -6,93 +6,113 @@ developer:
   linkedin: https://linkedin.com/in/naman-d-manocha
   location: Mumbai, India
 repositories:
-- name: FundersAI
-  path: C:/Users/naman/OneDrive/Desktop/FundersAI
-  tag: OpenAI Build Week Submission
-  primary_stack:
-  - Python
-  - FastAPI
-  - React
-  - TypeScript
-  - Vite
-  - TailwindCSS
-  - Qdrant
-  - PostgreSQL
-  - Next.js
-  - LangGraph
-  - Supabase
-  - Docker
-- name: TalentOS
-  path: C:/Users/naman/OneDrive/Desktop/ALLThingsAgentic
-  tag: All Things Agentic Hackathon (Taskmaster Track)
-  primary_stack:
-  - Python
-  - Google ADK
-  - LangGraph
-  - Next.js
-  - Firestore
-  - Google Cloud Run
-  - FastAPI
-  - React
-  - TailwindCSS
-  - Vertex AI
-- name: CareFlow
-  path: C:/Users/naman/OneDrive/Desktop/CareFlow Intelligence
-  tag: Clinical Research Intelligence
-  primary_stack:
-  - Python
-  - FastAPI
-  - Next.js
-  - TypeScript
-  - PostgreSQL
-  - ChromaDB
-  - Unsloth
-  - Supabase
-  - Ollama
-  - Docker
+  - name: FundersAI
+    path: C:/Users/naman/OneDrive/Desktop/FundersAI
+    tag: OpenAI Build Week Submission
+    repo_url: https://github.com/Naman6019/FundersAI
+    live_url: https://www.fundersai.co.in
+    deployed: true
+    primary_stack:
+      - Python
+      - FastAPI
+      - React
+      - TypeScript
+      - Vite
+      - TailwindCSS
+      - Qdrant
+      - PostgreSQL
+      - Next.js
+      - LangGraph
+      - Supabase
+      - Docker
+  - name: TalentOS
+    path: C:/Users/naman/OneDrive/Desktop/ALLThingsAgentic
+    tag: All Things Agentic Hackathon (Taskmaster Track)
+    repo_url: https://github.com/Naman6019/all-things-agentic
+    live_url: https://all-things-agentic--allthingsagentic-505213.asia-southeast1.hosted.app
+    deployed: true
+    primary_stack:
+      - Python
+      - Google ADK
+      - LangGraph
+      - Next.js
+      - Firestore
+      - Google Cloud Run
+      - FastAPI
+      - React
+      - TailwindCSS
+      - Vertex AI
+  - name: CareFlow
+    path: C:/Users/naman/OneDrive/Desktop/CareFlow Intelligence
+    tag: Clinical Research Intelligence
+    repo_url: https://github.com/Naman6019/CareFlow-Intelligence
+    deployed: false
+    primary_stack:
+      - Python
+      - FastAPI
+      - Next.js
+      - TypeScript
+      - PostgreSQL
+      - ChromaDB
+      - Unsloth
+      - Supabase
+      - Ollama
+      - Docker
+  - name: GitResume
+    path: C:/Users/naman/OneDrive/Desktop/resume_automation
+    tag: Autonomous Multi-Agent Resume & Portfolio Intelligence Engine
+    repo_url: https://github.com/Naman6019/git-resume-agent
+    deployed: false
+    primary_stack:
+      - Python
+      - Typer
+      - Rich
+      - Ollama
+      - Pytest
+      - python-docx
 personas:
-- id: fde
-  title: Agentic AI / Forward-Deployed Engineer
-  resume_file: Naman_Manocha_Agentic_AI_FDE_Resume.docx
-  emphasis:
-  - evals
-  - hybrid-search
-  - strict-abstention
-  - production-agents
-  - forward-deployed
-- id: genai
-  title: Generative AI Engineer
-  resume_file: Naman_Manocha_GenAI_Engineer_Resume.docx
-  emphasis:
-  - rag
-  - vector-embeddings
-  - langgraph
-  - llm-pipelines
-  - tool-calling
-- id: ai_engineer
-  title: AI / ML Engineer
-  resume_file: Naman_Manocha_AI_Engineer_Resume.docx
-  emphasis:
-  - mlops
-  - benchmarks
-  - latency-optimization
-  - fine-tuning
-  - rag-systems
-- id: master
-  title: Master Comprehensive Resume
-  resume_file: Naman_Manocha_Master_Resume.docx
-  emphasis:
-  - full-stack
-  - distributed-systems
-  - ai-agents
-  - production-architecture
+  - id: fde
+    title: Agentic AI / Forward-Deployed Engineer (1 Page)
+    resume_file: Naman_Manocha_Agentic_AI_FDE_Resume.docx
+    emphasis:
+      - evals
+      - hybrid-search
+      - strict-abstention
+      - production-agents
+      - forward-deployed
+  - id: genai
+    title: Generative AI Engineer (1 Page)
+    resume_file: Naman_Manocha_GenAI_Engineer_Resume.docx
+    emphasis:
+      - rag
+      - vector-embeddings
+      - langgraph
+      - llm-pipelines
+      - tool-calling
+  - id: ai_engineer
+    title: AI / ML Engineer (1 Page)
+    resume_file: Naman_Manocha_AI_Engineer_Resume.docx
+    emphasis:
+      - mlops
+      - benchmarks
+      - latency-optimization
+      - fine-tuning
+      - rag-systems
+  - id: master
+    title: Master Comprehensive Resume (2 Page)
+    resume_file: Naman_Manocha_Master_Resume.docx
+    emphasis:
+      - full-stack
+      - distributed-systems
+      - ai-agents
+      - production-architecture
 output:
   formats:
-  - docx
-  - pdf
+    - docx
+    - pdf
   resume_dir: C:/Users/naman/OneDrive/Desktop/Personal/Resume
   sync_paths:
-  - C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site/public/resume
+    - C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site/public/resume
 llm:
   provider: ollama
   model: kimi-k2.7-code

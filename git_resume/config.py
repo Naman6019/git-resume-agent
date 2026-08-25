@@ -22,6 +22,25 @@ class RepoConfig(BaseModel):
     path: str
     tag: Optional[str] = None
     primary_stack: List[str] = Field(default_factory=list)
+    repo_url: Optional[str] = None
+    live_url: Optional[str] = None
+    deployed: Optional[bool] = None
+
+    @property
+    def is_deployed(self) -> bool:
+        if self.deployed is not None:
+            return self.deployed
+        return bool(self.live_url)
+
+    @property
+    def formatted_links(self) -> str:
+        """Returns both live link and repo link if deployed, otherwise repo link."""
+        parts = []
+        if self.is_deployed and self.live_url:
+            parts.append(f"Live: {self.live_url}")
+        if self.repo_url:
+            parts.append(f"Repo: {self.repo_url}")
+        return " | ".join(parts) if parts else ""
 
 class PersonaConfig(BaseModel):
     id: str

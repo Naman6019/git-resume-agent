@@ -1,6 +1,6 @@
 import os
 import subprocess
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 def get_git_stats(repo_path: str) -> Dict[str, Any]:
     if not os.path.exists(repo_path):
@@ -83,3 +83,34 @@ def get_recent_commits(repo_path: str, count: int = 15) -> List[Dict[str, str]]:
         return commits
     except Exception:
         return []
+
+def get_git_remote_url(repo_path: str) -> Optional[str]:
+    """Retrieves and normalizes the git origin remote URL into clean HTTPS format."""
+    if not os.path.exists(repo_path):
+        return None
+    try:
+        remote = subprocess.check_output(
+            ["git", "config", "--get", "remote.origin.url"],
+            cwd=repo_path,
+            text=True,
+            stderr=subprocess.DEVNULL
+        ).strip()
+        if not remote:
+            return None
+        
+        # Convert SSH (git@github.com:user/repo.git) to HTTPS (https://github.com/user/repo)
+        if remote.startswith("git@github.com:"):
+            path_part = remote[len("git@github.com:"):]
+            remote = f"https://github.com/{path_part}"
+        elif remote.startswith("git@"):
+            # Generic git@host:path
+            parts = remote.split("@", 1)[1].split(":", 1)
+            if len(parts) == 2:
+                remote = f"https://{parts[0]}/{parts[1]}"
+        
+        if remote.endswith(".git"):
+            remote = remote[:-4]
+            
+        return remote
+    except Exception:
+        return None
