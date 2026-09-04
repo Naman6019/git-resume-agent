@@ -1,7 +1,7 @@
 version: "1.0"
 developer:
   name: Naman Manocha
-  email: namanmanocha6019@gmail.com
+  email: namanmanocha42248@gmail.com
   github: https://github.com/Naman6019
   linkedin: https://linkedin.com/in/naman-d-manocha
   location: Mumbai, India
@@ -98,6 +98,15 @@ personas:
       - latency-optimization
       - fine-tuning
       - rag-systems
+  - id: master_1page
+    title: Master Resume (1 Page)
+    resume_file: Naman_Manocha_Master_1Page_Resume.docx
+    emphasis:
+      - full-stack
+      - ai-agents
+      - rag
+      - applied-ml
+      - production-systems
   - id: master
     title: Master Comprehensive Resume (2 Page)
     resume_file: Naman_Manocha_Master_Resume.docx

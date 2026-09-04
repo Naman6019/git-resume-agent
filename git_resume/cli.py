@@ -6,7 +6,8 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
-from git_resume.config import load_config
+from typing import Optional
+from git_resume.config import load_config, find_config_path
 from git_resume.agents.inspector import InspectorAgent
 from git_resume.agents.synthesizer import SynthesizerAgent
 from git_resume.agents.verifier import GroundingVerifierAgent
@@ -14,6 +15,7 @@ from git_resume.agents.schema_discoverer import SchemaDiscoverer
 from git_resume.compilers.docx_compiler import DocxCompiler
 from git_resume.compilers.pdf_compiler import PdfCompiler
 from git_resume.utils.llm_client import LLMClient
+from git_resume.utils.git_utils import is_git_repo, get_git_remote_details, set_git_config
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -32,37 +34,107 @@ def auto_config(config_path: str = "gitresume.yaml"):
         for change in changes:
             console.print(f"  * [yellow]{change}[/yellow]")
     else:
-        console.print(f"[bold green]✓ {config_path} is already in sync with all repository READMEs and manifests.[/bold green]")
+        console.print(f"[bold green]✓ Configuration is already in sync with all repository READMEs and manifests.[/bold green]")
 
 @app.command()
-def install_hooks(config_path: str = "gitresume.yaml"):
-    """Install automated Git post-commit hooks across all repositories in gitresume.yaml."""
-    config = load_config(config_path)
-    console.print("[bold blue]🔧 Installing Git post-commit hooks...[/bold blue]")
+def install_hooks(
+    repo: Optional[str] = typer.Option(None, "--repo", "-r", help="Install hook for a specific repository (by name or path)"),
+    list_repos: bool = typer.Option(False, "--list", "-l", help="List all repositories with Git/GitHub status and hook state without installing"),
+    config_path: str = typer.Option("gitresume.yaml", "--config-path", "-c", help="Path to gitresume.yaml configuration")
+):
+    """Install automated Git post-commit hooks across all or specific repositories in gitresume.yaml."""
+    try:
+        abs_config = find_config_path(config_path)
+    except Exception as e:
+        console.print(f"[red]Error locating configuration: {e}[/red]")
+        raise typer.Exit(1)
+
+    config = load_config(abs_config)
+
+    # 1. Inspect and List mode
+    if list_repos:
+        table = Table(title="GitResume Repository Git/GitHub & Hook Inspection", show_header=True, header_style="bold magenta")
+        table.add_column("Repository", style="bold cyan")
+        table.add_column("Git Status", justify="center")
+        table.add_column("GitHub / Remote", style="cyan")
+        table.add_column("Hook Status", justify="center")
+        table.add_column("Local Path", style="dim")
+
+        for r in config.repositories:
+            is_git = is_git_repo(r.path)
+            remote_info = get_git_remote_details(r.path)
+            
+            git_badge = "[green]✓ Git Initialized[/green]" if is_git else "[red]✗ No .git[/red]"
+            
+            if remote_info["is_github"]:
+                remote_badge = f"[bold green]GitHub[/bold green] ({remote_info['repo_identifier'] or remote_info['remote_url']})"
+            elif remote_info["has_remote"]:
+                remote_badge = f"[cyan]Remote[/cyan] ({remote_info['remote_url']})"
+            else:
+                remote_badge = "[yellow]○ Local only (No remote)[/yellow]" if is_git else "[dim]N/A[/dim]"
+
+            hook_file = os.path.join(r.path, ".git", "hooks", "post-commit") if is_git else None
+            hook_installed = os.path.exists(hook_file) if hook_file else False
+            hook_badge = "[green]✓ Installed[/green]" if hook_installed else "[yellow]○ Not installed[/yellow]"
+
+            table.add_row(r.name, git_badge, remote_badge, hook_badge, r.path)
+
+        console.print(table)
+        console.print(f"\n[dim]Config source: {abs_config}[/dim]")
+        console.print("[dim]Tip: Use `git-resume install-hooks --repo <name>` to install a hook for a specific repo.[/dim]")
+        return
+
+    # 2. Filter target repos
+    targets = config.repositories
+    if repo:
+        repo_lower = repo.lower().strip()
+        targets = [
+            r for r in config.repositories 
+            if r.name.lower() == repo_lower or os.path.abspath(r.path).lower() == os.path.abspath(repo).lower()
+        ]
+        if not targets:
+            console.print(f"[red]Error: Repository '{repo}' not found in {abs_config}[/red]")
+            console.print(f"[dim]Configured repositories: {', '.join(r.name for r in config.repositories)}[/dim]")
+            raise typer.Exit(1)
+
+    console.print(f"[bold blue]🔧 Installing Git post-commit hooks using config [cyan]{abs_config}[/cyan]...[/bold blue]")
     
     hook_content = """#!/bin/sh
 # GitResume AI: Auto-sync resume statistics after commit
 git-resume sync || python -m git_resume.cli sync || true
 """
     installed = 0
-    for repo in config.repositories:
-        git_dir = os.path.join(repo.path, ".git")
-        hooks_dir = os.path.join(git_dir, "hooks")
-        if os.path.exists(git_dir):
-            os.makedirs(hooks_dir, exist_ok=True)
-            hook_path = os.path.join(hooks_dir, "post-commit")
-            with open(hook_path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(hook_content)
-            try:
-                os.chmod(hook_path, 0o755)
-            except Exception:
-                pass
-            console.print(f"  * [green]✓ Installed hook for [{repo.name}][/green]: {repo.path}")
-            installed += 1
-        else:
-            console.print(f"  * [yellow]⚠ Skipped [{repo.name}] (no .git directory at {repo.path})[/yellow]")
+    for target in targets:
+        if not is_git_repo(target.path):
+            console.print(f"  * [yellow]⚠ Skipped [{target.name}][/yellow]: No Git repository initialized at {target.path}")
+            continue
 
-    console.print(f"[bold green]✅ Successfully installed hooks across {installed} repositories![/bold green]")
+        git_dir = os.path.join(target.path, ".git")
+        hooks_dir = os.path.join(git_dir, "hooks")
+        os.makedirs(hooks_dir, exist_ok=True)
+        hook_path = os.path.join(hooks_dir, "post-commit")
+
+        with open(hook_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(hook_content)
+
+        try:
+            os.chmod(hook_path, 0o755)
+        except Exception:
+            pass
+
+        # Register git config gitresume.config in target repo
+        normalized_config_path = abs_config.replace("\\", "/")
+        set_git_config(target.path, "gitresume.config", normalized_config_path)
+
+        remote_info = get_git_remote_details(target.path)
+        remote_tag = f" [cyan]({remote_info['remote_url']})[/cyan]" if remote_info.get("remote_url") else ""
+        console.print(f"  * [green]✓ Installed hook & registered config for [{target.name}][/green]{remote_tag}: {target.path}")
+        installed += 1
+
+    if installed > 0:
+        console.print(f"[bold green]✅ Successfully configured hooks for {installed} {'repository' if installed == 1 else 'repositories'}![/bold green]")
+    else:
+        console.print("[yellow]⚠ No hooks were installed. Make sure targeted repository has `git init` run.[/yellow]")
 
 @app.command()
 def scan(config_path: str = "gitresume.yaml", auto_update: bool = True):

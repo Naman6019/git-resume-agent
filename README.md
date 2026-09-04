@@ -361,6 +361,16 @@ personas:
       - fine-tuning
       - rag-systems
 
+  - id: master_1page
+    title: Master Resume (1 Page)
+    resume_file: Naman_Manocha_Master_1Page_Resume.docx
+    emphasis:
+      - full-stack
+      - ai-agents
+      - rag
+      - applied-ml
+      - production-systems
+
   - id: master
     title: Master Comprehensive Resume (2 Page)
     resume_file: Naman_Manocha_Master_Resume.docx

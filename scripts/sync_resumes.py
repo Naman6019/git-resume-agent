@@ -145,6 +145,21 @@ def update_resumes():
         doc.save(master_path)
         print("  ✓ Updated: Naman_Manocha_Master_Resume.docx")
 
+    # 1b. Update Master 1-Page Resume
+    master_1p_path = os.path.join(RESUME_DIR, "Naman_Manocha_Master_1Page_Resume.docx")
+    if os.path.exists(master_1p_path):
+        doc = docx.Document(master_1p_path)
+        if len(doc.paragraphs) > 16:
+            doc.paragraphs[16].text = f"Python, FastAPI, Next.js, Supabase/pgvector, LangGraph, Groq, OpenAI, Cloudflare R2, Kubernetes (K3s)\nSolo-built, Apr–Aug 2026 — ~{f_loc_k} LOC across {f_files} files, {f_commits} commits, {f_tests} test suites — OpenAI Build Week"
+            if doc.paragraphs[16].runs:
+                doc.paragraphs[16].runs[0].italic = True
+        if len(doc.paragraphs) > 21:
+            doc.paragraphs[21].text = f"Python, Google ADK, LangGraph, Next.js, Firestore, Google Cloud Run  |  ~{t_loc_k} LOC across {t_files} files, {t_commits} commits, 235+ test suite"
+            if doc.paragraphs[21].runs:
+                doc.paragraphs[21].runs[0].italic = True
+        doc.save(master_1p_path)
+        print("  ✓ Updated: Naman_Manocha_Master_1Page_Resume.docx")
+
     # 2. Update Agentic AI FDE Resume
     fde_path = os.path.join(RESUME_DIR, "Naman_Manocha_Agentic_AI_FDE_Resume.docx")
     if os.path.exists(fde_path):

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-09-05
+
+### 🚀 Added
+- **Dual Master Resume Suite (1-Page & 2-Page)**:
+  - Added new generalist **1-Page Master Resume** (`Naman_Manocha_Master_1Page_Resume.docx` / `.pdf`): a balanced, high-density distillation of the master resume covering classical ML, multi-agent systems, citation-grounded RAG, cloud microservices, and product ownership without persona bias.
+  - Engineered exact geometry (0.28" margins, calibrated line spacing, active hyperlinks) guaranteeing a strict **1-page ATS-ready PDF export**.
+  - Registered `master_1page` persona in `gitresume.yaml`.
+- **Compiler & Pipeline Integration**:
+  - Enhanced `DocxCompiler.update_resume()` to dynamically support `master_1page` alongside `master` (2-page).
+  - Updated `scripts/sync_resumes.py` to compile and sync both master resume variants.
+  - Added test coverage in `tests/test_git_resume.py` validating both master configurations and compilers.
+
+### 🛡️ Refined & Improved
+- **2-Page Master Resume Pagination**:
+  - Restructured page flow in `Naman_Manocha_Master_Resume.docx` with an explicit page break before `FundersAI Reports`, eliminating the orphaned header at the bottom of Page 1.
+  - Page 1 now cleanly encapsulates Summary, Skills, PayGain experience, and FundersAI; Page 2 cleanly encapsulates FundersAI Reports, CareFlow Intelligence, TalentOS, SQuAD QA, and Education.
+  - Verified strict **2-page ATS-ready PDF export** with zero spillover.
+- **Developer Configuration**:
+  - Updated developer email in `gitresume.yaml` to `namanmanocha42248@gmail.com`.
+
+---
+
 ## [0.2.0] - 2026-08-25
 
 ### 🚀 Added

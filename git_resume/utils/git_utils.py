@@ -1,6 +1,7 @@
 import os
+import re
 import subprocess
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 def get_git_stats(repo_path: str) -> Dict[str, Any]:
     if not os.path.exists(repo_path):
@@ -114,3 +115,82 @@ def get_git_remote_url(repo_path: str) -> Optional[str]:
         return remote
     except Exception:
         return None
+
+def is_git_repo(repo_path: str) -> bool:
+    """Checks if a directory is an initialized Git repository."""
+    if not repo_path or not os.path.exists(repo_path):
+        return False
+    git_dir = os.path.join(repo_path, ".git")
+    if os.path.exists(git_dir):
+        return True
+    try:
+        res = subprocess.check_output(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=repo_path,
+            text=True,
+            stderr=subprocess.DEVNULL
+        ).strip()
+        return res == "true"
+    except Exception:
+        return False
+
+def get_git_remote_details(repo_path: str) -> Dict[str, Any]:
+    """Inspects Git remote information, detecting GitHub repositories."""
+    if not is_git_repo(repo_path):
+        return {
+            "is_git": False,
+            "has_remote": False,
+            "remote_url": None,
+            "is_github": False,
+            "repo_identifier": None
+        }
+    
+    remote_url = get_git_remote_url(repo_path)
+    if not remote_url:
+        return {
+            "is_git": True,
+            "has_remote": False,
+            "remote_url": None,
+            "is_github": False,
+            "repo_identifier": None
+        }
+    
+    is_github = "github.com" in remote_url.lower()
+    repo_identifier = None
+    if is_github:
+        match = re.search(r'github\.com[/:]([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', remote_url)
+        if match:
+            repo_identifier = match.group(1).rstrip(".git")
+
+    return {
+        "is_git": True,
+        "has_remote": True,
+        "remote_url": remote_url,
+        "is_github": is_github,
+        "repo_identifier": repo_identifier
+    }
+
+def set_git_config(repo_path: str, key: str, value: str) -> bool:
+    """Sets a repository-local git config key-value pair."""
+    if not is_git_repo(repo_path):
+        return False
+    try:
+        subprocess.check_call(
+            ["git", "config", key, value],
+            cwd=repo_path,
+            stderr=subprocess.DEVNULL
+        )
+        return True
+    except Exception:
+        return False
+
+def get_git_config(key: str, repo_path: Optional[str] = None) -> Optional[str]:
+    """Retrieves a local or global git config value."""
+    cmd = ["git", "config", "--get", key]
+    cwd = repo_path if repo_path and os.path.exists(repo_path) else None
+    try:
+        res = subprocess.check_output(cmd, cwd=cwd, text=True, stderr=subprocess.DEVNULL).strip()
+        return res if res else None
+    except Exception:
+        return None
+

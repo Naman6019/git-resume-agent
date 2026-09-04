@@ -101,7 +101,7 @@ class DocxCompiler:
         t_files = t_stats.get("files", 134)
         t_commits = t_stats.get("commits", 51)
 
-        if persona_id == "master":
+        if persona_id in ("master", "master_2page"):
             # P19: FundersAI subheader
             if len(doc.paragraphs) > 19:
                 f_base = f"Solo-built, Apr–Aug 2026 — ~{f_loc} lines of code across {f_files} files, {f_commits} commits, {f_tests} test suites — submitted to OpenAI Build Week"
@@ -112,6 +112,17 @@ class DocxCompiler:
                 doc.paragraphs[38].runs[0].text = "TalentOS — Autonomous Opportunity Intelligence Platform (All Things Agentic Hackathon)"
                 t_base = f"Python, Google ADK, LangGraph, Next.js, Firestore, Google Cloud Run  |  Solo-built, Aug 2026 — ~{t_loc} LOC across {t_files} files, {t_commits} commits, 235+ test suite"
                 self.format_paragraph_with_links(doc.paragraphs[39], t_base, t_stats, is_italic=True)
+
+        elif persona_id == "master_1page":
+            # P16: FundersAI subheader
+            if len(doc.paragraphs) > 16:
+                f_base = f"Python, FastAPI, Next.js, Supabase/pgvector, LangGraph, Groq, OpenAI, Cloudflare R2, Kubernetes (K3s)\nSolo-built, Apr–Aug 2026 — ~{f_loc} LOC across {f_files} files, {f_commits} commits, {f_tests} test suites — OpenAI Build Week"
+                self.format_paragraph_with_links(doc.paragraphs[16], f_base, f_stats, is_italic=True)
+
+            # P21: TalentOS
+            if len(doc.paragraphs) > 21:
+                t_base = f"Python, Google ADK, LangGraph, Next.js, Firestore, Google Cloud Run  |  ~{t_loc} LOC across {t_files} files, {t_commits} commits, 235+ test suite"
+                self.format_paragraph_with_links(doc.paragraphs[21], t_base, t_stats, is_italic=True)
 
         elif persona_id == "fde":
             if len(doc.paragraphs) > 16:

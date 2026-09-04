@@ -4,6 +4,7 @@ import json
 import yaml
 from typing import Dict, Any, List, Tuple, Optional
 from git_resume.utils.git_utils import get_git_remote_url
+from git_resume.config import find_config_path
 
 TECH_KEYWORDS = [
     ("fastapi", "FastAPI"),
@@ -210,10 +211,12 @@ class SchemaDiscoverer:
 
     def auto_sync_yaml(self, config_path: str = "gitresume.yaml") -> Tuple[bool, List[str]]:
         """Automatically updates gitresume.yaml if README or manifests have newer tags/stacks/links."""
-        if not os.path.exists(config_path):
+        try:
+            resolved_path = find_config_path(config_path)
+        except Exception:
             return False, []
 
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(resolved_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         changes = []
@@ -264,7 +267,7 @@ class SchemaDiscoverer:
                 changes.append(f"[{name}] Set deployment status: {'Deployed' if discovered['deployed'] else 'In-Repo'}")
 
         if changes:
-            with open(config_path, "w", encoding="utf-8") as f:
+            with open(resolved_path, "w", encoding="utf-8") as f:
                 yaml.dump(data, f, sort_keys=False, default_flow_style=False, allow_unicode=True)
             return True, changes
 
