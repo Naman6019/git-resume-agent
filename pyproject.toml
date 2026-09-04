@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "git-resume-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "Autonomous Git-Driven Resume & Portfolio Agent"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Naman Manocha", email = "namanmanocha6019@gmail.com" }]
+authors = [{ name = "Naman Manocha", email = "namanmanocha42248@gmail.com" }]
 keywords = ["resume", "portfolio", "git", "ai-agents", "ollama", "multi-agent", "automation"]
 classifiers = [
     "Development Status :: 4 - Beta",
