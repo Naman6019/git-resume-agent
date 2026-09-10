@@ -20,6 +20,8 @@ def install_hooks(config_path: str = "gitresume.yaml"):
     hook_content = """#!/bin/sh
 # GitResume AI: Auto-sync resume statistics after commit
 git-resume sync || python -m git_resume.cli sync || true
+# GitResume AI: Check for README changes worth reflecting on the portfolio site
+git-resume sync-descriptions || python -m git_resume.cli sync-descriptions || true
 """
 
     installed_count = 0

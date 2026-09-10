@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-09-10
+
+### 🚀 Added
+- **`git-resume sync-descriptions`**: closes the same staleness gap for portfolio project *descriptions* that 0.5.0 closed for resumes. For each repo with a new `portfolio_slug` set in `gitresume.yaml`, checks whether `README.md` gained a new commit since last seen (tracked in a new, gitignored `.gitresume_state.json`), and if the change looks material, proposes updated `summary`/`problem`/`build`/`outcome`/`limitations`/`stack` fields for that project's entry in `portfolio.ts`.
+- **`PortfolioDescriptionAgent`** (`git_resume/agents/portfolio_writer.py`): asks the LLM a yes/no question before anything else -- is this README diff material enough to make the site copy stale? -- then drops any proposed field that cites a number or stack item absent from the README (`verify_grounded()`). A response matching `LLMClient`'s known heuristic-fallback sentinel is treated as "no working LLM," never as a proposal.
+- **Field-level, AST-free TypeScript editing** (`git_resume/compilers/portfolio_ts_editor.py`): locates a project's object literal in `portfolioProjects` by brace-matching on its `slug`, then replaces only the specific fields that changed via scoped regex + `json.dumps` escaping -- never a blind block overwrite. `validate_typescript()` runs `npx tsc --noEmit` as the final gate; a failure reverts the file on disk before anything is committed.
+- **PR-only publishing for this path** (`open_portfolio_pr()` in `git_utils.py`): unlike resume sync's direct-to-`main` auto-push, description changes always land as a branch + `gh pr create`, deliberately -- these are AI-authored sentences about the developer's own work, and the resume auto-push precedent doesn't extend to unreviewed public site copy.
+- **`portfolio_slug`** on `RepoConfig` and a new top-level **`portfolio:`** config block (`repo_path`, `content_file`, `base_branch`) in `config.py` / `gitresume.yaml`.
+- The shared post-commit hook template (`cli.py` and `scripts/install_hooks.py`) now runs `sync-descriptions` alongside `sync`, so no separate hook install step is needed.
+
+---
+
+## [0.5.0] - 2026-09-10
+
+### 🚀 Added
+- **Auto-publish sync destinations**: `git-resume sync` previously stopped at `shutil.copy2()` into `output.sync_paths` — the freshest resumes sat as uncommitted changes in `portfolio_site` until someone noticed and pushed by hand, so hosts like Netlify never picked them up automatically. `sync` now walks each sync path up to its enclosing Git repo (`_find_repo_root()` in `cli.py`) and runs the new `commit_and_push()` (`git_utils.py`) there: stage, commit (`chore(resume): sync latest resume variants`), push to the current branch's `origin`. Fully closes the "edit a resume locally → live portfolio serves it" loop with no manual git step.
+- **`output.auto_push` config flag** (`config.py`, default `true`): set to `false` in `gitresume.yaml` to keep the old copy-only behavior for a given setup.
+- Push failures (no remote, rejected push, detached HEAD, etc.) are reported per-destination without failing the whole sync — files are still copied locally, and the message says push them manually.
+
+---
+
 ## [0.4.0] - 2026-09-10
 
 ### 🚀 Added

@@ -182,6 +182,70 @@ Automatically wires up post-commit hooks across all repositories listed in `gitr
 git-resume install-hooks
 ```
 
+### 6. Check & Propose Portfolio Description Updates
+Checks tracked repos for README changes and opens a review PR against the portfolio site if a description looks stale (see [Keeping Portfolio Project Descriptions in Sync](#-keeping-portfolio-project-descriptions-in-sync)):
+```bash
+git-resume sync-descriptions
+```
+
+---
+
+## 📝 Keeping Portfolio Project Descriptions in Sync
+
+Resumes aren't the only thing that goes stale. The prose describing each
+project on the portfolio site (`src/content/portfolio.ts`) drifts too, every
+time a README gains a new capability, drops a limitation, or changes its
+stack. `git-resume sync-descriptions` closes that loop, safely:
+
+1. **Watches README.md, not every commit.** For each repository with a
+   `portfolio_slug` set in `gitresume.yaml`, it checks whether `README.md` has
+   a newer commit than the last time it looked (tracked in the local
+   `.gitresume_state.json`, never committed).
+2. **First sighting of a repo is a baseline, not a proposal.** The very first
+   time a repository is checked there's nothing to diff against, so it just
+   records the current README commit and moves on -- it never rewrites a
+   description out of the blue on day one.
+3. **Diffs, then judges.** On a real change, it feeds the README diff (plus
+   the current site copy, for tone) to an LLM and asks a yes/no question
+   first: is this change material enough to make the site copy stale? Typo
+   fixes and badge shuffling get `NO_CHANGE`. A new capability, a changed
+   boundary, or a stack change gets specific field-level rewrites.
+4. **Grounds every claim before touching anything.** Any proposed sentence
+   citing a number or stack item that doesn't actually appear in the README
+   is dropped from the proposal. If everything gets dropped, nothing happens.
+5. **Edits `portfolio.ts` field-by-field, never a blind overwrite.** The
+   editor locates the exact object literal for the matching `slug` by
+   brace-matching and replaces only the specific fields that changed,
+   preserving formatting everywhere else.
+6. **`npx tsc --noEmit` is the final gate.** The edited file is type-checked
+   before anything is committed. A failure reverts the file on disk -- nothing
+   broken ever reaches git.
+7. **Opens a PR, never pushes to `main`.** A branch is cut from the
+   portfolio's `base_branch`, the single file is committed and pushed, and a
+   PR is opened via `gh pr create` with the README diff's context in the
+   body. Netlify will build a deploy preview on it. Nothing reaches
+   production without a human merging it.
+
+Wire it into the same zero-touch loop as resume sync by adding
+`portfolio_slug` (matching the `slug` in `portfolioProjects`) to a repo entry
+and a `portfolio:` block pointing at the site:
+
+```yaml
+repositories:
+  - name: MyNewProject
+    portfolio_slug: my-new-project
+    # ...
+
+portfolio:
+  repo_path: C:/Users/yourusername/Desktop/portfolio_site
+  content_file: src/content/portfolio.ts
+  base_branch: main
+```
+
+`git-resume install-hooks` wires this into the same post-commit hook as
+resume sync, so a commit that changes a tracked repo's README triggers a
+check automatically -- no separate hook to install.
+
 ---
 
 ## ➕ How to Add a New Repository to GitResume

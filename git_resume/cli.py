@@ -15,7 +15,19 @@ from git_resume.agents.schema_discoverer import SchemaDiscoverer
 from git_resume.compilers.docx_compiler import DocxCompiler
 from git_resume.compilers.pdf_compiler import PdfCompiler
 from git_resume.utils.llm_client import LLMClient
-from git_resume.utils.git_utils import is_git_repo, get_git_remote_details, set_git_config
+from git_resume.utils.git_utils import (
+    is_git_repo,
+    get_git_remote_details,
+    set_git_config,
+    commit_and_push,
+    get_last_commit_touching,
+    get_file_diff,
+    get_file_at_commit,
+    open_portfolio_pr,
+)
+from git_resume.utils.state import state_path_for, load_state, save_state
+from git_resume.agents.portfolio_writer import PortfolioDescriptionAgent
+from git_resume.compilers.portfolio_ts_editor import apply_field_updates, validate_typescript, ProjectBlockNotFound
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -102,6 +114,8 @@ def install_hooks(
     hook_content = """#!/bin/sh
 # GitResume AI: Auto-sync resume statistics after commit
 git-resume sync || python -m git_resume.cli sync || true
+# GitResume AI: Check for README changes worth reflecting on the portfolio site
+git-resume sync-descriptions || python -m git_resume.cli sync-descriptions || true
 """
     installed = 0
     for target in targets:
@@ -278,7 +292,176 @@ def sync(config_path: str = "gitresume.yaml", auto_update: bool = True):
                     shutil.copy2(os.path.join(config.output.resume_dir, fname), os.path.join(dest, fname))
                     console.print(f"  * Synced {fname} -> {dest}")
 
+    # 5. Commit & Push each destination that is itself a Git repo, so hosts
+    # like Netlify/Vercel pick up the fresh resumes on their next deploy.
+    if config.output.auto_push:
+        console.print("[bold blue]Publishing synced resumes (commit + push)...[/bold blue]")
+        for dest in config.output.sync_paths:
+            repo_root = _find_repo_root(dest)
+            if not repo_root:
+                console.print(f"  * [dim]Skipped {dest}: not inside a Git repository.[/dim]")
+                continue
+
+            result = commit_and_push(
+                repo_root,
+                message="chore(resume): sync latest resume variants\n\nAuto-synced by GitResume Agent.",
+            )
+            if result.get("skipped"):
+                console.print(f"  * [dim]{repo_root}: {result.get('reason', 'nothing to publish')}.[/dim]")
+            elif result.get("success"):
+                n = len(result.get("files", []))
+                console.print(f"  * [bold green]✓ Pushed {n} file(s) to {repo_root} (branch {result.get('branch')})[/bold green]")
+            else:
+                console.print(f"  * [bold red]✗ {repo_root}: {result.get('reason', 'commit/push failed')}[/bold red]")
+                console.print("    [dim]Files were still copied locally; push them manually when ready.[/dim]")
+
     console.print("[bold green]GitResume Sync Completed Successfully![/bold green]")
+
+
+def _find_repo_root(path: str) -> Optional[str]:
+    """Walks upward from `path` to find the nearest enclosing Git repository root
+    (the directory that actually contains `.git`, not just any path inside the tree)."""
+    current = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
+@app.command(name="sync-descriptions")
+def sync_descriptions(config_path: str = "gitresume.yaml"):
+    """For each tracked repo with a `portfolio_slug`, check whether README.md
+    changed since the last check; if the change looks material, propose an
+    updated project description and open a PR against the portfolio site for
+    human review. Never pushes directly -- see CHANGELOG for why."""
+    abs_config = find_config_path(config_path)
+    config = load_config(abs_config)
+
+    if not config.portfolio:
+        console.print("[yellow]No `portfolio:` section configured in gitresume.yaml -- nothing to do.[/yellow]")
+        raise typer.Exit(0)
+
+    tracked = [r for r in config.repositories if r.portfolio_slug]
+    if not tracked:
+        console.print("[yellow]No repositories have `portfolio_slug` set -- nothing to do.[/yellow]")
+        raise typer.Exit(0)
+
+    state_path = state_path_for(abs_config)
+    state = load_state(state_path)
+    agent = PortfolioDescriptionAgent(
+        llm_client=LLMClient(provider=config.llm.provider, model=config.llm.model, fallback_model=config.llm.fallback_model)
+    )
+
+    portfolio_repo = config.portfolio.repo_path
+    content_path = os.path.join(portfolio_repo, config.portfolio.content_file)
+
+    console.print("[bold blue]Checking tracked repositories for README changes...[/bold blue]")
+
+    for repo in tracked:
+        latest_sha = get_last_commit_touching(repo.path, "README.md")
+        if not latest_sha:
+            console.print(f"  * [dim]{repo.name}: no README.md history, skipping.[/dim]")
+            continue
+
+        entry = state.get(repo.name, {})
+        prev_sha = entry.get("readme_sha")
+
+        if prev_sha is None:
+            state[repo.name] = {"readme_sha": latest_sha}
+            console.print(f"  * [cyan]{repo.name}: establishing baseline at {latest_sha[:7]} (no proposal on first run).[/cyan]")
+            continue
+
+        if prev_sha == latest_sha:
+            console.print(f"  * [dim]{repo.name}: README unchanged since last check.[/dim]")
+            continue
+
+        console.print(f"  * [bold]{repo.name}[/bold]: README changed ({prev_sha[:7]} -> {latest_sha[:7]}), analyzing...")
+
+        readme_text = get_file_at_commit(repo.path, latest_sha, "README.md")
+        readme_diff = get_file_diff(repo.path, prev_sha, latest_sha, "README.md")
+
+        if not os.path.exists(content_path):
+            console.print(f"    [bold red]✗ Portfolio content file not found at {content_path}[/bold red]")
+            continue
+        with open(content_path, "r", encoding="utf-8") as f:
+            portfolio_source = f.read()
+
+        try:
+            proposed = agent.propose(repo, readme_text, readme_diff, portfolio_source)
+        except ProjectBlockNotFound as e:
+            console.print(f"    [bold red]✗ {e}[/bold red]")
+            state[repo.name] = {"readme_sha": latest_sha}
+            continue
+
+        if not proposed:
+            console.print(f"    [dim]No description update warranted (or LLM unavailable).[/dim]")
+            state[repo.name] = {"readme_sha": latest_sha}
+            continue
+
+        accepted_keys = agent.verify_grounded(proposed, readme_text)
+        filtered = {k: proposed[k] for k in accepted_keys}
+        dropped = set(proposed.keys()) - set(accepted_keys)
+        if dropped:
+            console.print(f"    [yellow]Dropped ungrounded field(s): {', '.join(dropped)}[/yellow]")
+
+        if not filtered:
+            console.print(f"    [yellow]Proposal failed grounding checks entirely -- skipped.[/yellow]")
+            state[repo.name] = {"readme_sha": latest_sha}
+            continue
+
+        try:
+            new_source = apply_field_updates(portfolio_source, repo.portfolio_slug, filtered)
+        except ProjectBlockNotFound as e:
+            console.print(f"    [bold red]✗ {e}[/bold red]")
+            state[repo.name] = {"readme_sha": latest_sha}
+            continue
+
+        with open(content_path, "w", encoding="utf-8") as f:
+            f.write(new_source)
+
+        ok, message = validate_typescript(portfolio_repo)
+        if not ok:
+            with open(content_path, "w", encoding="utf-8") as f:
+                f.write(portfolio_source)  # revert -- never leave a broken build on disk
+            console.print(f"    [bold red]✗ tsc failed, reverted: {message}[/bold red]")
+            state[repo.name] = {"readme_sha": latest_sha}
+            continue
+
+        readme_commit_msg = get_last_commit_touching(repo.path, "README.md")
+        branch_name = f"resume-agent/update-{repo.portfolio_slug}-{latest_sha[:7]}"
+        field_list = ", ".join(filtered.keys())
+        pr_body = (
+            f"Proposed by GitResume Agent after a README change in **{repo.name}**.\n\n"
+            f"**Fields updated:** {field_list}\n\n"
+            f"**Source README diff:** `{prev_sha[:7]}..{latest_sha[:7]}` in `{repo.repo_url or repo.path}`\n\n"
+            "This is an AI-generated proposal grounded in the README above -- review the wording "
+            "before merging, this does not auto-deploy."
+        )
+
+        result = open_portfolio_pr(
+            portfolio_repo,
+            base_branch=config.portfolio.base_branch,
+            branch_name=branch_name,
+            files=[config.portfolio.content_file],
+            commit_message=f"content({repo.portfolio_slug}): sync description from README update\n\nSource: {repo.name}@{latest_sha[:7]}",
+            pr_title=f"Update {repo.name} description from README changes",
+            pr_body=pr_body,
+        )
+
+        if result.get("skipped"):
+            console.print(f"    [dim]{result.get('reason')}[/dim]")
+        elif result.get("success"):
+            console.print(f"    [bold green]✓ Opened PR: {result.get('pr_url')}[/bold green]")
+        else:
+            console.print(f"    [bold red]✗ {result.get('reason')}[/bold red]")
+
+        state[repo.name] = {"readme_sha": latest_sha}
+
+    save_state(state_path, state)
+    console.print("[bold green]Description sync check complete.[/bold green]")
 
 if __name__ == "__main__":
     app()

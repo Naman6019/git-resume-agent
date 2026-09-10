@@ -184,6 +184,174 @@ def set_git_config(repo_path: str, key: str, value: str) -> bool:
     except Exception:
         return False
 
+def get_last_commit_touching(repo_path: str, filename: str) -> Optional[str]:
+    """Returns the SHA of the most recent commit that touched `filename`, or None
+    if the file has no history (or the repo doesn't exist)."""
+    if not is_git_repo(repo_path):
+        return None
+    try:
+        sha = subprocess.check_output(
+            ["git", "log", "-1", "--format=%H", "--", filename],
+            cwd=repo_path,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        return sha or None
+    except Exception:
+        return None
+
+
+def get_file_diff(repo_path: str, old_sha: str, new_sha: str, filename: str) -> str:
+    """Unified diff of `filename` between two commits. Empty string on any failure."""
+    try:
+        return subprocess.check_output(
+            ["git", "diff", f"{old_sha}..{new_sha}", "--", filename],
+            cwd=repo_path,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return ""
+
+
+def get_file_at_commit(repo_path: str, sha: str, filename: str) -> str:
+    """Content of `filename` as of `sha`. Empty string if it didn't exist there."""
+    try:
+        return subprocess.check_output(
+            ["git", "show", f"{sha}:{filename}"],
+            cwd=repo_path,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return ""
+
+
+def get_commit_message(repo_path: str, sha: str) -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "log", "-1", "--format=%s", sha],
+            cwd=repo_path,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        return ""
+
+
+def open_portfolio_pr(
+    repo_path: str,
+    base_branch: str,
+    branch_name: str,
+    files: List[str],
+    commit_message: str,
+    pr_title: str,
+    pr_body: str,
+) -> Dict[str, Any]:
+    """Branches off `base_branch`, commits `files`, pushes, and opens a GitHub PR
+    via `gh`. Always leaves the repo back on `base_branch` when done, whether or
+    not the PR was created, so other tooling (e.g. the resume sync) isn't
+    surprised by a dangling feature branch checkout."""
+    if not is_git_repo(repo_path):
+        return {"success": False, "reason": "not a git repository"}
+
+    try:
+        subprocess.check_call(["git", "fetch", "origin", base_branch], cwd=repo_path, stderr=subprocess.DEVNULL)
+        subprocess.check_call(["git", "checkout", base_branch], cwd=repo_path, stderr=subprocess.DEVNULL)
+        subprocess.check_call(["git", "pull", "--ff-only", "origin", base_branch], cwd=repo_path, stderr=subprocess.DEVNULL)
+        subprocess.check_call(["git", "checkout", "-B", branch_name], cwd=repo_path, stderr=subprocess.DEVNULL)
+        subprocess.check_call(["git", "add"] + files, cwd=repo_path, stderr=subprocess.DEVNULL)
+
+        staged = subprocess.check_output(
+            ["git", "diff", "--cached", "--name-only"], cwd=repo_path, text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        if not staged:
+            subprocess.check_call(["git", "checkout", base_branch], cwd=repo_path, stderr=subprocess.DEVNULL)
+            subprocess.run(["git", "branch", "-D", branch_name], cwd=repo_path, stderr=subprocess.DEVNULL)
+            return {"success": True, "skipped": True, "reason": "no changes to commit"}
+
+        subprocess.check_call(["git", "commit", "-m", commit_message], cwd=repo_path, stderr=subprocess.DEVNULL)
+        push = subprocess.run(
+            ["git", "push", "-u", "origin", branch_name, "--force-with-lease"],
+            cwd=repo_path, text=True, capture_output=True,
+        )
+        if push.returncode != 0:
+            subprocess.check_call(["git", "checkout", base_branch], cwd=repo_path, stderr=subprocess.DEVNULL)
+            return {"success": False, "reason": f"push failed: {push.stderr.strip() or push.stdout.strip()}"}
+
+        pr = subprocess.run(
+            ["gh", "pr", "create", "--base", base_branch, "--head", branch_name, "--title", pr_title, "--body", pr_body],
+            cwd=repo_path, text=True, capture_output=True,
+        )
+        subprocess.check_call(["git", "checkout", base_branch], cwd=repo_path, stderr=subprocess.DEVNULL)
+
+        if pr.returncode != 0:
+            return {"success": False, "reason": f"gh pr create failed: {pr.stderr.strip() or pr.stdout.strip()}", "branch": branch_name}
+
+        pr_url = pr.stdout.strip().splitlines()[-1] if pr.stdout.strip() else ""
+        return {"success": True, "skipped": False, "pr_url": pr_url, "branch": branch_name}
+    except subprocess.CalledProcessError as e:
+        try:
+            subprocess.check_call(["git", "checkout", base_branch], cwd=repo_path, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+        return {"success": False, "reason": str(e)}
+
+
+def commit_and_push(repo_path: str, message: str, paths: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Stages, commits, and pushes changes in repo_path. Safe to call with nothing to commit."""
+    if not is_git_repo(repo_path):
+        return {"success": False, "skipped": True, "reason": "not a git repository"}
+
+    try:
+        subprocess.check_call(
+            ["git", "add"] + (paths if paths else ["-A"]),
+            cwd=repo_path,
+            stderr=subprocess.DEVNULL,
+        )
+
+        staged = subprocess.check_output(
+            ["git", "diff", "--cached", "--name-only"],
+            cwd=repo_path,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if not staged:
+            return {"success": True, "skipped": True, "reason": "no changes to commit"}
+
+        subprocess.check_call(
+            ["git", "commit", "-m", message],
+            cwd=repo_path,
+            stderr=subprocess.DEVNULL,
+        )
+
+        branch = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=repo_path,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+
+        push = subprocess.run(
+            ["git", "push", "origin", branch],
+            cwd=repo_path,
+            text=True,
+            capture_output=True,
+        )
+        if push.returncode != 0:
+            return {
+                "success": False,
+                "skipped": False,
+                "reason": f"push failed: {push.stderr.strip() or push.stdout.strip()}",
+                "files": staged.splitlines(),
+                "branch": branch,
+            }
+
+        return {"success": True, "skipped": False, "files": staged.splitlines(), "branch": branch}
+    except subprocess.CalledProcessError as e:
+        return {"success": False, "skipped": False, "reason": str(e)}
+
+
 def get_git_config(key: str, repo_path: Optional[str] = None) -> Optional[str]:
     """Retrieves a local or global git config value."""
     cmd = ["git", "config", "--get", key]

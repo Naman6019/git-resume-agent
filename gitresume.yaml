@@ -12,6 +12,7 @@ repositories:
     repo_url: https://github.com/Naman6019/FundersAI
     live_url: https://www.fundersai.co.in
     deployed: true
+    portfolio_slug: funders-ai
     primary_stack:
       - Python
       - FastAPI
@@ -31,6 +32,7 @@ repositories:
     repo_url: https://github.com/Naman6019/all-things-agentic
     live_url: https://all-things-agentic--allthingsagentic-505213.asia-southeast1.hosted.app
     deployed: true
+    portfolio_slug: talentos
     primary_stack:
       - Python
       - Google ADK
@@ -47,6 +49,7 @@ repositories:
     tag: Clinical Research Intelligence
     repo_url: https://github.com/Naman6019/CareFlow-Intelligence
     deployed: false
+    portfolio_slug: careflow-intelligence
     primary_stack:
       - Python
       - FastAPI
@@ -62,7 +65,8 @@ repositories:
     path: C:/Users/naman/OneDrive/Desktop/resume_automation
     tag: Autonomous Multi-Agent Resume & Portfolio Intelligence Engine
     repo_url: https://github.com/Naman6019/git-resume-agent
-    deployed: false
+    deployed: true
+    portfolio_slug: git-resume-agent
     primary_stack:
       - Python
       - Typer
@@ -122,6 +126,10 @@ output:
   resume_dir: C:/Users/naman/OneDrive/Desktop/Personal/Resume
   sync_paths:
     - C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site/public/resume
+portfolio:
+  repo_path: C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site
+  content_file: src/content/portfolio.ts
+  base_branch: main
 llm:
   provider: ollama
   model: kimi-k2.7-code

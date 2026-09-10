@@ -23,6 +23,9 @@ htmlcov/
 .env
 .env.local
 
+# GitResume Agent local state (per-repo README sync checkpoints)
+.gitresume_state.json
+
 # IDE
 .vscode/
 .idea/

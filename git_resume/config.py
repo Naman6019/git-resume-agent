@@ -28,6 +28,10 @@ class RepoConfig(BaseModel):
     repo_url: Optional[str] = None
     live_url: Optional[str] = None
     deployed: Optional[bool] = None
+    # Slug of the matching entry in the portfolio site's `portfolioProjects` array
+    # (src/content/portfolio.ts). Only repos with this set are considered by
+    # `git-resume sync-descriptions`.
+    portfolio_slug: Optional[str] = None
 
     @property
     def is_deployed(self) -> bool:
@@ -55,6 +59,13 @@ class OutputConfig(BaseModel):
     formats: List[str] = Field(default_factory=lambda: ["docx", "pdf"])
     resume_dir: str
     sync_paths: List[str] = Field(default_factory=list)
+    auto_push: bool = True
+
+class PortfolioConfig(BaseModel):
+    """Where the portfolio site lives, for `git-resume sync-descriptions`."""
+    repo_path: str
+    content_file: str = "src/content/portfolio.ts"
+    base_branch: str = "main"
 
 class GitResumeConfig(BaseModel):
     version: str = "1.0"
@@ -63,6 +74,7 @@ class GitResumeConfig(BaseModel):
     repositories: List[RepoConfig] = Field(default_factory=list)
     personas: List[PersonaConfig] = Field(default_factory=list)
     output: OutputConfig
+    portfolio: Optional[PortfolioConfig] = None
 
 def find_config_path(config_path: Optional[str] = "gitresume.yaml") -> str:
     """
