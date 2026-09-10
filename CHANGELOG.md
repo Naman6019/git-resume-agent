@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.1] - 2026-09-10
+
+### 🚀 Added
+- **`git-resume init` Command**: Scaffolds a complete, annotated `gitresume.yaml` starter configuration in the current working directory, supporting `--output` / `-o` and `--force` / `-f` options.
+- **Enhanced Documentation & Onboarding**: Added multi-layer configuration discovery hierarchy, annotated starter configuration schema with required/optional field tags, and full options reference for `git-resume install-hooks` (`--list`, `--repo`).
+- **Expanded Test Suite**: Added test coverage for `git-resume init` command, bringing automated tests to 9/9 passing.
+
+---
+
 ## [0.7.0] - 2026-09-10
 
 ### 🚀 Added
