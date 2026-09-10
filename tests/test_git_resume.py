@@ -119,3 +119,37 @@ def test_master_personas_config_and_compiler():
     assert compiler.update_resume(p2_path, "master", mock_stats) is True
     assert compiler.update_resume(p1_path, "master_1page", mock_stats) is True
 
+def test_scoped_update_resume():
+    """target_repo should touch only that project's section, and be a no-op
+    (no save, returns False) for a persona that doesn't mention it."""
+    import shutil
+    import docx
+    from git_resume.compilers.docx_compiler import DocxCompiler
+
+    config = load_config('gitresume.yaml')
+    persona = next(p for p in config.personas if p.id == 'fde')
+    src = os.path.join(config.output.resume_dir, persona.resume_file)
+    scratch = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"_scoped_scratch_{persona.resume_file}")
+    shutil.copy2(src, scratch)
+
+    try:
+        before_texts = [p.text for p in docx.Document(scratch).paragraphs]
+
+        compiler = DocxCompiler()
+        mock_stats = {
+            "FundersAI": {"loc_k": "999K", "files": 1, "commits": 1, "test_suites": 1},
+            "TalentOS": {"loc_k": "32K", "files": 134, "commits": 51},
+        }
+
+        # A repo this persona never mentions -> nothing written, file untouched.
+        assert compiler.update_resume(scratch, "fde", mock_stats, target_repo="CareFlow") is False
+        assert [p.text for p in docx.Document(scratch).paragraphs] == before_texts
+
+        # Scoping to FundersAI updates only FundersAI's paragraph(s).
+        assert compiler.update_resume(scratch, "fde", mock_stats, target_repo="FundersAI") is True
+        after_texts = [p.text for p in docx.Document(scratch).paragraphs]
+        assert any("999K" in t for t in after_texts)
+        assert [t for t in after_texts if "TalentOS" in t] == [t for t in before_texts if "TalentOS" in t]
+    finally:
+        os.remove(scratch)
+

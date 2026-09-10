@@ -60,6 +60,11 @@ class OutputConfig(BaseModel):
     resume_dir: str
     sync_paths: List[str] = Field(default_factory=list)
     auto_push: bool = True
+    # When true, `install-hooks` writes a per-repo hook (`git-resume sync --repo <name>`)
+    # instead of a full `git-resume sync`, so a commit in one tracked repo only updates,
+    # exports, and pushes that project's section of each resume. Off by default so
+    # existing installs keep today's full-sync-on-every-commit behavior until opted in.
+    scoped_sync: bool = False
 
 class PortfolioConfig(BaseModel):
     """Where the portfolio site lives, for `git-resume sync-descriptions`."""

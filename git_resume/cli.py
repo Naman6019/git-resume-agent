@@ -110,18 +110,28 @@ def install_hooks(
             raise typer.Exit(1)
 
     console.print(f"[bold blue]🔧 Installing Git post-commit hooks using config [cyan]{abs_config}[/cyan]...[/bold blue]")
-    
-    hook_content = """#!/bin/sh
-# GitResume AI: Auto-sync resume statistics after commit
-git-resume sync || python -m git_resume.cli sync || true
-# GitResume AI: Check for README changes worth reflecting on the portfolio site
-git-resume sync-descriptions || python -m git_resume.cli sync-descriptions || true
-"""
+
+    scoped = config.output.scoped_sync
+    if scoped:
+        console.print("[dim]output.scoped_sync is on -- each repo's hook will only update its own resume section.[/dim]")
+
     installed = 0
     for target in targets:
         if not is_git_repo(target.path):
             console.print(f"  * [yellow]⚠ Skipped [{target.name}][/yellow]: No Git repository initialized at {target.path}")
             continue
+
+        if scoped:
+            sync_line = f'git-resume sync --repo "{target.name}" || python -m git_resume.cli sync --repo "{target.name}" || true'
+        else:
+            sync_line = "git-resume sync || python -m git_resume.cli sync || true"
+
+        hook_content = f"""#!/bin/sh
+# GitResume AI: Auto-sync resume statistics after commit
+{sync_line}
+# GitResume AI: Check for README changes worth reflecting on the portfolio site
+git-resume sync-descriptions || python -m git_resume.cli sync-descriptions || true
+"""
 
         git_dir = os.path.join(target.path, ".git")
         hooks_dir = os.path.join(git_dir, "hooks")
@@ -249,7 +259,16 @@ def generate(
     ))
 
 @app.command()
-def sync(config_path: str = "gitresume.yaml", auto_update: bool = True):
+def sync(
+    config_path: str = "gitresume.yaml",
+    auto_update: bool = True,
+    repo: Optional[str] = typer.Option(
+        None, "--repo", "-r",
+        help="Scope the sync to one repository: only that project's section in each resume "
+             "is rewritten, and only the resumes that actually changed are PDF-exported and "
+             "synced/pushed. Omit to run the full multi-repo sync (unchanged from before)."
+    ),
+):
     """Run the end-to-end multi-agent pipeline: Inspect -> Synthesize -> Verify -> Compile -> Sync."""
     if auto_update:
         discoverer = SchemaDiscoverer()
@@ -259,38 +278,72 @@ def sync(config_path: str = "gitresume.yaml", auto_update: bool = True):
             for c in changes:
                 console.print(f"  * {c}")
 
-    console.print("[bold blue]Starting GitResume Multi-Agent Sync...[/bold blue]")
     config = load_config(config_path)
+
+    target_repo_name = None
+    if repo:
+        matched = next((r for r in config.repositories if r.name.lower() == repo.lower()), None)
+        if not matched:
+            console.print(f"[red]Error: Repository '{repo}' not found in {config_path}[/red]")
+            console.print(f"[dim]Configured repositories: {', '.join(r.name for r in config.repositories)}[/dim]")
+            raise typer.Exit(1)
+        target_repo_name = matched.name
+        console.print(f"[bold blue]Starting GitResume Scoped Sync for [cyan]{target_repo_name}[/cyan]...[/bold blue]")
+    else:
+        console.print("[bold blue]Starting GitResume Multi-Agent Sync...[/bold blue]")
+
     inspector = InspectorAgent()
     docx_compiler = DocxCompiler()
     pdf_compiler = PdfCompiler()
 
-    # 1. Inspect
+    # 1. Inspect -- always over every repo: some persona resumes blend two projects'
+    # numbers into one sentence, and git stats are cheap (no LLM, no PDF export), so
+    # there's no correctness reason to skip repos other than the scoped target.
     stats = inspector.inspect_all(config.repositories)
     for name, st in stats.items():
         links_str = f" [{st.get('formatted_links')}]" if st.get("formatted_links") else ""
         console.print(f"  * Inspected [cyan]{name}[/cyan]{links_str}: {st['commits']} commits, {st['loc']:,} LOC, {st['test_suites']} test suites")
 
-    # 2. Update DOCX Personas
+    # 2. Update DOCX Personas -- only the touched files move on to export/sync/push.
     console.print("[bold green]Updating Persona Resumes (.docx)...[/bold green]")
+    touched_paths = []
     for persona in config.personas:
         doc_path = os.path.join(config.output.resume_dir, persona.resume_file)
-        if docx_compiler.update_resume(doc_path, persona.id, stats, developer_location=config.developer.location):
+        if docx_compiler.update_resume(doc_path, persona.id, stats, developer_location=config.developer.location, target_repo=target_repo_name):
             console.print(f"  * Updated persona: [bold cyan]{persona.title}[/bold cyan] ({persona.resume_file})")
+            touched_paths.append(doc_path)
 
-    # 3. Export PDFs
+    if target_repo_name and not touched_paths:
+        console.print(f"[dim]No persona resume mentions {target_repo_name} -- nothing to export or sync.[/dim]")
+        console.print("[bold green]GitResume Sync Completed Successfully![/bold green]")
+        return
+
+    # 3. Export PDFs -- only the resumes that were actually rewritten when scoped.
     console.print("[bold yellow]Compiling fresh PDFs via MS Word...[/bold yellow]")
-    pdf_compiler.export_all(config.output.resume_dir)
-    console.print("  * All PDF variants compiled.")
+    if target_repo_name:
+        exported = pdf_compiler.export_files(touched_paths)
+    else:
+        exported = pdf_compiler.export_all(config.output.resume_dir)
+    console.print(f"  * {len(exported)} PDF variant(s) compiled.")
 
-    # 4. Sync to Destinations
+    touched_basenames = {os.path.splitext(os.path.basename(p))[0] for p in touched_paths}
+
+    # 4. Sync to Destinations -- only the touched docx/pdf pair when scoped.
     console.print("[bold magenta]Syncing to Portfolio & Web Destinations...[/bold magenta]")
+    synced_by_dest: dict = {}
     for dest in config.output.sync_paths:
-        if os.path.exists(dest):
-            for fname in os.listdir(config.output.resume_dir):
-                if (fname.endswith(".docx") or fname.endswith(".pdf")) and not fname.startswith("~$"):
-                    shutil.copy2(os.path.join(config.output.resume_dir, fname), os.path.join(dest, fname))
-                    console.print(f"  * Synced {fname} -> {dest}")
+        if not os.path.exists(dest):
+            continue
+        dest_synced = []
+        for fname in os.listdir(config.output.resume_dir):
+            if fname.startswith("~$") or not (fname.endswith(".docx") or fname.endswith(".pdf")):
+                continue
+            if target_repo_name and os.path.splitext(fname)[0] not in touched_basenames:
+                continue
+            shutil.copy2(os.path.join(config.output.resume_dir, fname), os.path.join(dest, fname))
+            console.print(f"  * Synced {fname} -> {dest}")
+            dest_synced.append(fname)
+        synced_by_dest[dest] = dest_synced
 
     # 5. Commit & Push each destination that is itself a Git repo, so hosts
     # like Netlify/Vercel pick up the fresh resumes on their next deploy.
@@ -302,11 +355,19 @@ def sync(config_path: str = "gitresume.yaml", auto_update: bool = True):
                 console.print(f"  * [dim]Skipped {dest}: not inside a Git repository.[/dim]")
                 continue
 
-            result = commit_and_push(
-                repo_root,
-                message="chore(resume): sync latest resume variants\n\nAuto-synced by GitResume Agent.",
-                paths=[os.path.relpath(dest, repo_root)],
-            )
+            if target_repo_name:
+                dest_synced = synced_by_dest.get(dest, [])
+                if not dest_synced:
+                    console.print(f"  * [dim]{repo_root}: nothing scoped to {target_repo_name} to push.[/dim]")
+                    continue
+                rel_dest = os.path.relpath(dest, repo_root)
+                push_paths = [os.path.join(rel_dest, fname) for fname in dest_synced]
+                message = f"chore(resume): sync {target_repo_name} section\n\nAuto-synced by GitResume Agent (scoped: {target_repo_name})."
+            else:
+                push_paths = [os.path.relpath(dest, repo_root)]
+                message = "chore(resume): sync latest resume variants\n\nAuto-synced by GitResume Agent."
+
+            result = commit_and_push(repo_root, message=message, paths=push_paths)
             if result.get("skipped"):
                 console.print(f"  * [dim]{repo_root}: {result.get('reason', 'nothing to publish')}.[/dim]")
             elif result.get("success"):

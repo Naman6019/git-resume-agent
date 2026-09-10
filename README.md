@@ -5,7 +5,7 @@
 [![CLI](https://img.shields.io/badge/CLI-Typer%20%26%20Rich-magenta.svg)](https://typer.tiangolo.com/)
 [![Multi--Agent](https://img.shields.io/badge/Architecture-Autonomous%20Agentic%20Pipeline-orange.svg)](https://github.com/Naman6019/git-resume-agent)
 [![Ollama](https://img.shields.io/badge/LLM-Ollama%20Cloud%20%7C%20Local-purple.svg)](https://ollama.com)
-[![Tests](https://img.shields.io/badge/Tests-5%2F5%20Passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-8%2F8%20Passing-brightgreen.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Autonomous Git-Driven Resume & Portfolio Agent**  
@@ -56,6 +56,7 @@ GitResume Agent operates on an **event-driven, zero-touch autonomy loop**:
 ```
 
 * **Zero-Touch Git Hooks**: Once installed, you never need to manually trigger compilation. Committing to any project repository automatically initiates background resume updates.
+* **Scoped, Per-Repo Sync (opt-in)**: with `output.scoped_sync: true`, a commit in one tracked repo updates *only that project's section* of each resume — other projects' text, PDF exports, and pushes are left untouched. See [Scoped Sync](#-scoped-sync-update-only-the-project-that-changed).
 * **In-Place Schema Auto-Sync**: Adding a new framework to `package.json` or a hackathon badge to `README.md` automatically mutates `gitresume.yaml` idempotently.
 * **Deterministic Guardrails**: Human governance controls initial role personas and target paths, while multi-agent execution handles perception, critique, and artifact compilation.
 
@@ -161,6 +162,13 @@ git-resume auto-config
 Runs the entire multi-agent pipeline across all projects simultaneously (Inspect $\rightarrow$ Synthesize $\rightarrow$ Verify $\rightarrow$ Compile `.docx` with clickable hyperlinks $\rightarrow$ Export `.pdf` via Word COM $\rightarrow$ Sync to Portfolio):
 ```bash
 git-resume sync
+```
+
+Pass `--repo` to scope this to a single project — only that repo's section of each
+resume is rewritten, and only the resumes that actually changed are exported and
+pushed (see [Scoped Sync](#-scoped-sync-update-only-the-project-that-changed)):
+```bash
+git-resume sync --repo FundersAI
 ```
 
 ### 4. Synthesize Grounded Achievement Bullets
@@ -452,6 +460,9 @@ output:
   resume_dir: C:/Users/naman/OneDrive/Desktop/Personal/Resume
   sync_paths:
     - C:/Users/naman/OneDrive/Desktop/Personal/portfolio_site/public/resume
+  # Opt-in: makes `install-hooks` write per-repo hooks so a commit in one repo only
+  # updates/exports/pushes that project's section. See "Scoped Sync" below. Default: false.
+  scoped_sync: false
 
 # LLM Intelligence Engine
 llm:
@@ -468,7 +479,7 @@ How does the automation work on every commit?
 When you run `git-resume install-hooks` (or `python scripts/install_hooks.py`):
 1. It reads your configured repository paths in `gitresume.yaml`.
 2. Locates each repository's `.git/hooks/` folder.
-3. Installs an executable `post-commit` script that triggers `git-resume sync` in the background upon every commit.
+3. Installs an executable `post-commit` script that triggers `git-resume sync` in the background upon every commit (plus `sync-descriptions`, which checks that repo's `README.md` for portfolio-worthy changes).
 
 ```bash
 git-resume install-hooks
@@ -483,6 +494,47 @@ git-resume install-hooks
 
 ---
 
+## 🎯 Scoped Sync: Update Only the Project That Changed
+
+By default, a commit in *any* tracked repo runs a full `sync`: every project's
+section is re-inspected and rewritten in every persona resume, every PDF is
+re-exported via Word COM, and every synced file is re-pushed — even if only one
+repo actually changed. That's fine for a handful of projects, but it means a
+commit in a repo nobody's resume-reads about still pays for a full Word export
+and push cycle.
+
+Set `output.scoped_sync: true` in `gitresume.yaml` and re-run `install-hooks` to
+make each repo's hook self-scoped instead:
+
+```yaml
+output:
+  scoped_sync: true
+```
+```bash
+git-resume install-hooks   # regenerates hooks to pass --repo <name>
+```
+
+Each repo's `post-commit` hook now runs `git-resume sync --repo "<RepoName>"`
+instead of a bare `sync`. A commit in `FundersAI`:
+1. Still inspects every repo's live git stats (cheap — no LLM calls, no Word) so
+   personas that blend two projects into one sentence (e.g. `genai`/`ai_engineer`,
+   which mention TalentOS and GitResume in the same paragraph) stay correct.
+2. Rewrites **only** the paragraph(s) that mention FundersAI in each persona resume
+   — TalentOS, CareFlow, and GitResume's text are left byte-for-byte as they were.
+3. PDF-exports **only** the resumes that were actually rewritten (skipped entirely
+   if a persona never mentions FundersAI), instead of every `.docx` in `resume_dir`.
+4. Copies and pushes **only** those changed docx/pdf files to `output.sync_paths`,
+   instead of the whole directory.
+
+`scoped_sync` is off by default — existing setups keep today's full-sync-on-every-commit
+behavior until you opt in. You can also invoke it manually without touching the
+config flag at all:
+```bash
+git-resume sync --repo TalentOS
+```
+
+---
+
 ## 🧪 Testing
 
 Run the automated unit test suite:
@@ -490,13 +542,16 @@ Run the automated unit test suite:
 pytest tests/ -v
 ```
 ```
-collected 5 items
-tests/test_git_resume.py::test_load_config PASSED        [ 20%]
-tests/test_git_resume.py::test_inspector_agent PASSED    [ 40%]
-tests/test_git_resume.py::test_grounding_verifier PASSED [ 60%]
-tests/test_git_resume.py::test_synthesizer_agent PASSED  [ 80%]
-tests/test_git_resume.py::test_schema_discoverer PASSED  [100%]
-====================== 5 passed in 0.62s ======================
+collected 8 items
+tests/test_git_resume.py::test_load_config PASSED                         [ 12%]
+tests/test_git_resume.py::test_inspector_agent PASSED                     [ 25%]
+tests/test_git_resume.py::test_grounding_verifier PASSED                  [ 37%]
+tests/test_git_resume.py::test_synthesizer_agent PASSED                   [ 50%]
+tests/test_git_resume.py::test_schema_discoverer PASSED                   [ 62%]
+tests/test_git_resume.py::test_find_config_path_and_git_utils PASSED      [ 75%]
+tests/test_git_resume.py::test_master_personas_config_and_compiler PASSED [ 87%]
+tests/test_git_resume.py::test_scoped_update_resume PASSED                [100%]
+====================== 8 passed in 1.22s ======================
 ```
 
 ---

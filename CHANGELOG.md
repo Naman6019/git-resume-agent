@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] - 2026-09-10
+
+### 🚀 Added
+- **Scoped, per-repo sync** (`gitresume.yaml` → `output.scoped_sync`, default `false`): until now, committing in *any* tracked repo ran a full `git-resume sync` that re-inspected and rewrote every project's section in every persona resume, re-exported every PDF via Word COM, and re-pushed every synced file — regardless of which repo actually changed. With `scoped_sync: true`, `install-hooks` instead writes each repo's hook as `git-resume sync --repo "<name>"`, so a FundersAI commit only rewrites FundersAI's paragraph(s) in each resume, only PDF-exports the resumes that actually changed, and only pushes those files to the sync destinations. Repos other than the one that committed are left byte-for-byte untouched.
+  - `sync` gained a `--repo` / `-r` option; used standalone (without the config flag) it works the same way for a manual one-off scoped run.
+  - `DocxCompiler.update_resume()` gained an optional `target_repo` parameter — every project-specific paragraph write is now gated on it, and the file is only saved (return `True`) if something in it actually pertains to that repo.
+  - `PdfCompiler` gained `export_files()`, exporting a specific list of `.docx` paths instead of everything in `resume_dir`.
+  - Off by default: existing installs keep today's full-sync-on-every-commit behavior until `scoped_sync` is set to `true` and `install-hooks` is re-run.
+
+---
+
 ## [0.6.1] - 2026-09-10
 
 ### 🛡️ Fixed

@@ -228,14 +228,42 @@ class DocxCompiler:
     # ------------------------------------------------------------------
     # Main entry point
     # ------------------------------------------------------------------
-    def update_resume(self, file_path: str, persona_id: str, repo_stats: Dict[str, Dict[str, Any]], developer_location: Optional[str] = None) -> bool:
+    def update_resume(
+        self,
+        file_path: str,
+        persona_id: str,
+        repo_stats: Dict[str, Dict[str, Any]],
+        developer_location: Optional[str] = None,
+        target_repo: Optional[str] = None,
+    ) -> bool:
+        """Rewrites the persona's project sections from `repo_stats`.
+
+        When `target_repo` is None (the default), every project section is rewritten
+        and the file is always saved -- this is the original, full-sync behavior.
+
+        When `target_repo` is set, only the section(s) that mention that repo are
+        touched; every other project's text is left byte-for-byte as it was. The file
+        is saved (and this returns True) only if something was actually rewritten, so
+        a commit in one repo doesn't trigger a PDF export / push for resumes it never
+        touched.
+        """
         if not os.path.exists(file_path):
             return False
 
         doc = docx.Document(file_path)
+        changed = target_repo is None
 
-        # Keep the header city in sync with gitresume.yaml on every persona, every sync.
-        self.sync_header_location(doc, developer_location)
+        def wants(*repo_names: str) -> bool:
+            nonlocal changed
+            if target_repo is None or target_repo in repo_names:
+                changed = True
+                return True
+            return False
+
+        # Header city sync is a config-level concern, not a per-repo one -- only run
+        # it on a full sync so a single scoped commit can't drag every resume along.
+        if target_repo is None:
+            self.sync_header_location(doc, developer_location)
 
         f_stats = repo_stats.get("FundersAI", {})
         t_stats = repo_stats.get("TalentOS", {})
@@ -253,56 +281,61 @@ class DocxCompiler:
 
         if persona_id in ("master", "master_2page"):
             # P19: FundersAI subheader
-            if len(doc.paragraphs) > 19:
+            if len(doc.paragraphs) > 19 and wants("FundersAI"):
                 f_base = f"Solo-built, Apr–Aug 2026 — ~{f_loc} lines of code across {f_files} files, {f_commits} commits, {f_tests} test suites — submitted to OpenAI Build Week"
                 self.format_paragraph_with_links(doc.paragraphs[19], f_base, f_stats, is_italic=True)
 
             # P38 & P39: TalentOS
-            if len(doc.paragraphs) > 39:
+            if len(doc.paragraphs) > 39 and wants("TalentOS"):
                 doc.paragraphs[38].runs[0].text = "TalentOS — Autonomous Opportunity Intelligence Platform (All Things Agentic Hackathon)"
                 t_base = f"Python, Google ADK, LangGraph, Next.js, Firestore, Google Cloud Run  |  Solo-built, Aug 2026 — ~{t_loc} LOC across {t_files} files, {t_commits} commits, 235+ test suite"
                 self.format_paragraph_with_links(doc.paragraphs[39], t_base, t_stats, is_italic=True)
 
             # Standalone GitResume section before EDUCATION (comprehensive doc has room for it).
-            self.sync_gitresume_block(doc, g_stats)
+            if wants("GitResume"):
+                self.sync_gitresume_block(doc, g_stats)
 
         elif persona_id == "master_1page":
             # FundersAI subheader - found relative to the "FundersAI —" project header
             # rather than a fixed index, so inserting/removing bullets on this template
             # (e.g. to fill out the page) can't silently misalign future syncs.
             f_stat_para = self._find_stat_para(doc, "FundersAI —", fallback_idx=16)
-            if f_stat_para is not None:
+            if f_stat_para is not None and wants("FundersAI"):
                 f_base = f"Python, FastAPI, Next.js, Supabase/pgvector, LangGraph, Groq, OpenAI, Cloudflare R2, Kubernetes (K3s)\nSolo-built, Apr–Aug 2026 — ~{f_loc} LOC across {f_files} files, {f_commits} commits, {f_tests} test suites — OpenAI Build Week"
                 self.format_paragraph_with_links(f_stat_para, f_base, f_stats, is_italic=True)
 
             # TalentOS - same header-relative lookup.
             t_stat_para = self._find_stat_para(doc, "TalentOS —", fallback_idx=21)
-            if t_stat_para is not None:
+            if t_stat_para is not None and wants("TalentOS"):
                 t_base = f"Python, Google ADK, LangGraph, Next.js, Firestore, Google Cloud Run  |  ~{t_loc} LOC across {t_files} files, {t_commits} commits, 235+ test suite"
                 self.format_paragraph_with_links(t_stat_para, t_base, t_stats, is_italic=True)
 
             # Space is tight on a strict 1-pager - fold GitResume into the existing
             # 'Other Projects & Research' line instead of adding new paragraphs.
-            self.append_gitresume_to_paragraph(doc, "SQuAD QA Benchmarking", g_stats, compact=False)
+            if wants("GitResume"):
+                self.append_gitresume_to_paragraph(doc, "SQuAD QA Benchmarking", g_stats, compact=False)
 
         elif persona_id == "fde":
-            if len(doc.paragraphs) > 16:
+            if len(doc.paragraphs) > 16 and wants("FundersAI"):
                 f_base = f"Python, FastAPI, Next.js, LangGraph, Groq, OpenAI  |  ~{f_loc} LOC, {f_files} files, {f_commits} commits, {f_tests} test suites — OpenAI Build Week"
                 self.format_paragraph_with_links(doc.paragraphs[16], f_base, f_stats, is_italic=True)
-            if len(doc.paragraphs) > 20:
+            if len(doc.paragraphs) > 20 and wants("TalentOS"):
                 doc.paragraphs[19].text = "TalentOS — Autonomous Opportunity Intelligence Platform (All Things Agentic Hackathon)\t"
                 doc.paragraphs[19].runs[0].bold = True
                 t_base = f"Python, Google ADK, LangGraph, Next.js, Firestore, Google Cloud Run  |  ~{t_loc} LOC across {t_files} files, {t_commits} commits, 235+ test suite"
                 self.format_paragraph_with_links(doc.paragraphs[20], t_base, t_stats, is_italic=True)
 
             # fde has no catch-all paragraph - give GitResume its own compact block.
-            self.sync_gitresume_block(doc, g_stats)
+            if wants("GitResume"):
+                self.sync_gitresume_block(doc, g_stats)
 
         elif persona_id == "genai":
-            if len(doc.paragraphs) > 15:
+            if len(doc.paragraphs) > 15 and wants("FundersAI"):
                 f_base = f"Python, FastAPI, Next.js, Supabase/pgvector, LangGraph, Groq, OpenAI  |  ~{f_loc} LOC, {f_files} files, {f_commits} commits, {f_tests} test suites — OpenAI Build Week"
                 self.format_paragraph_with_links(doc.paragraphs[15], f_base, f_stats, is_italic=True)
-            if len(doc.paragraphs) > 24:
+            # This paragraph blends TalentOS's live numbers with the GitResume clause into
+            # one sentence, so a commit in either repo needs to rewrite it.
+            if len(doc.paragraphs) > 24 and wants("TalentOS", "GitResume"):
                 t_links_str = " | " + t_stats.get("formatted_links", "") if t_stats.get("formatted_links") else ""
                 doc.paragraphs[24].text = (
                     f"TalentOS (All Things Agentic Hackathon, Taskmaster Track): dual-pipeline multi-agent platform (Google ADK, LangGraph, Gemini on Vertex AI) generating tailored resumes/pitches with 91% deterministic pre-filtering before LLM calls — ~{t_loc} LOC, {t_files} files, 235+ test suite{t_links_str}. FundersAI Reports: decoupled LangGraph microservice on a K3s/EC2 Kubernetes deployment. SQuAD QA Benchmarking: fine-tuned BERT/BiDAF/DistilBERT; published research paper."
@@ -310,15 +343,19 @@ class DocxCompiler:
                 )
 
         elif persona_id == "ai_engineer":
-            if len(doc.paragraphs) > 16:
+            if len(doc.paragraphs) > 16 and wants("FundersAI"):
                 f_base = f"Python, FastAPI, Next.js, Supabase/pgvector, LangGraph, Groq, OpenAI, Cloudflare R2  |  ~{f_loc} LOC, {f_files} files, {f_commits} commits, {f_tests} test suites — OpenAI Build Week"
                 self.format_paragraph_with_links(doc.paragraphs[16], f_base, f_stats, is_italic=True)
-            if len(doc.paragraphs) > 25:
+            # Same blended TalentOS + GitResume sentence as the genai persona above.
+            if len(doc.paragraphs) > 25 and wants("TalentOS", "GitResume"):
                 t_links_str = " | " + t_stats.get("formatted_links", "") if t_stats.get("formatted_links") else ""
                 doc.paragraphs[25].text = (
                     f"TalentOS (All Things Agentic Hackathon, Taskmaster Track): dual-pipeline autonomous agent platform (Google ADK, LangGraph, Firestore) ingesting ~2,500 postings/run across 8 sources with 91% pre-filtering and a 3-state evaluator+drafter chain — ~{t_loc} LOC, {t_files} files, 235+ tests{t_links_str}. FundersAI Reports: decoupled LangGraph microservice on a 2-replica Kubernetes Deployment (K3s/AWS EC2). SQuAD QA Benchmarking: fine-tuned/benchmarked BERT/BiDAF/DistilBERT; published as a research paper."
                     + self.gitresume_clause(g_stats, compact=True)
                 )
+
+        if not changed:
+            return False
 
         doc.save(file_path)
         return True
