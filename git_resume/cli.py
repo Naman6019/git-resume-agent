@@ -305,6 +305,7 @@ def sync(config_path: str = "gitresume.yaml", auto_update: bool = True):
             result = commit_and_push(
                 repo_root,
                 message="chore(resume): sync latest resume variants\n\nAuto-synced by GitResume Agent.",
+                paths=[os.path.relpath(dest, repo_root)],
             )
             if result.get("skipped"):
                 console.print(f"  * [dim]{repo_root}: {result.get('reason', 'nothing to publish')}.[/dim]")

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.1] - 2026-09-10
+
+### 🛡️ Fixed
+- **Resume auto-push over-staged**: the 0.5.0 auto-push used `git add -A` in the destination repo, which swept up *any* other uncommitted file sitting in that working tree (in practice: `tsconfig.tsbuildinfo`, a stray TS build cache, landed in a resume-sync commit on the first live run). `sync`'s auto-push now scopes `git add` to the specific sync destination directory (`os.path.relpath(dest, repo_root)`) instead of the whole repo.
+
+---
+
 ## [0.6.0] - 2026-09-10
 
 ### 🚀 Added
