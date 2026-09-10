@@ -261,7 +261,7 @@ def sync(config_path: str = "gitresume.yaml", auto_update: bool = True):
     console.print("[bold green]Updating Persona Resumes (.docx)...[/bold green]")
     for persona in config.personas:
         doc_path = os.path.join(config.output.resume_dir, persona.resume_file)
-        if docx_compiler.update_resume(doc_path, persona.id, stats):
+        if docx_compiler.update_resume(doc_path, persona.id, stats, developer_location=config.developer.location):
             console.print(f"  * Updated persona: [bold cyan]{persona.title}[/bold cyan] ({persona.resume_file})")
 
     # 3. Export PDFs

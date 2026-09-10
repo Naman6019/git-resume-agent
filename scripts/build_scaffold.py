@@ -1,5 +1,13 @@
 r"""
 Builds the complete GitResume AI package inside C:\Users\naman\OneDrive\Desktop\resume_automation
+
+*** DEPRECATED / STALE - DO NOT RUN (as of v0.4.0, 2026-09-10) ***
+This script writes an OLD snapshot of the package (pre-master_1page, pre-GitResume-repo-entry,
+pre-ChromaDB, older gitresume.yaml/config.py/git_utils.py/docx_compiler.py) and has not been kept
+in sync with git_resume/ since it was written. Rerunning it will silently overwrite the current
+compilers, config schema, and gitresume.yaml with that older version and regress everything added
+since - including the master_1page persona, the GitResume self-listing, and the header-location
+sync fix. Either regenerate this scaffold from the current package or delete it; don't run it as-is.
 """
 
 import os

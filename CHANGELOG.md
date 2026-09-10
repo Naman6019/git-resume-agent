@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-09-10
+
+### 🚀 Added
+- **1-Page Master Resume content expansion**: restored two bullets that the 1-page distillation had compressed out relative to the 2-page master — `FundersAI`'s "Cloud Storage & Billing" (Cloudflare R2, Razorpay) and `CareFlow`'s "Human-in-the-Loop Data Agent" (synthetic patient/encounter ingestion, OpenRouter fallback) — to use the whitespace left at the bottom of the page. Verified via headless LibreOffice conversion that the page count stays at exactly 1 with margin to spare.
+
+### 🛡️ Refined & Improved
+- **Compiler robustness for `master_1page`**: `DocxCompiler.update_resume()` previously located the FundersAI/TalentOS stat lines by a hardcoded paragraph index, which would silently start overwriting the wrong paragraph the next time the template gained or lost a paragraph (as the bullets above just did). Added `_find_stat_para()`, which locates each stat line relative to its project's header text instead, and switched the `master_1page` branch to use it (with the old index kept only as a last-resort fallback).
+- **Header/location sync** (carried from the previous 0.3.x hotfix, now versioned): `sync_header_location()` keeps the resume's header city in sync with `developer.location` in `gitresume.yaml` on every persona/every sync, instead of that field being baked into the template and only ever set once by hand.
+- **GitResume self-listing**: `sync` now lists the GitResume project itself on every persona (`sync_gitresume_block()` / `append_gitresume_to_paragraph()`), idempotently, instead of computing its stats and never using them.
+
+### ⚠️ Known issue
+- `scripts/build_scaffold.py` is a stale historical bootstrap script and has not been kept in sync with the live package (it predates `master_1page`, the GitResume repo entry, and several `git_utils`/`config` fields the current CLI depends on). It is not part of the normal `sync` flow, but running it would regress the package. It's been marked deprecated at the top of the file — do not rerun it. It should either be regenerated from the current package or deleted; ask before doing either since it's a real content change either way.
+
+---
+
 ## [0.3.0] - 2026-09-05
 
 ### 🚀 Added
