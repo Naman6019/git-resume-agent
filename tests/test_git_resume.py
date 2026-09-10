@@ -153,3 +153,29 @@ def test_scoped_update_resume():
     finally:
         os.remove(scratch)
 
+def test_init_command():
+    from typer.testing import CliRunner
+    from git_resume.cli import app
+    runner = CliRunner()
+    
+    target_yaml = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_scratch_init.yaml")
+    if os.path.exists(target_yaml):
+        os.remove(target_yaml)
+        
+    try:
+        result = runner.invoke(app, ["init", "--output", target_yaml])
+        assert result.exit_code == 0
+        assert os.path.exists(target_yaml)
+        
+        # Verify the generated starter YAML is valid and parseable by load_config
+        cfg = load_config(target_yaml)
+        assert cfg.developer.name == "Your Name"
+        assert len(cfg.repositories) == 1
+        assert cfg.repositories[0].name == "MyProject"
+        assert cfg.output.resume_dir == "./resumes"
+    finally:
+        if os.path.exists(target_yaml):
+            os.remove(target_yaml)
+
+
+

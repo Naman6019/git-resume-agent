@@ -35,6 +35,77 @@ if hasattr(sys.stdout, "reconfigure"):
 app = typer.Typer(help="GitResume AI — Autonomous Multi-Agent Resume & Portfolio Intelligence Engine")
 console = Console()
 
+STARTER_CONFIG_YAML = """version: "1.0"
+
+# Developer profile
+developer:
+  name: "Your Name"
+  email: "you@example.com"
+  github: "https://github.com/yourusername"
+  linkedin: "https://linkedin.com/in/yourprofile"  # Optional
+  location: "San Francisco, CA"                   # Optional
+
+# Repositories to inspect, ground, and track
+repositories:
+  - name: MyProject
+    path: ./projects/my-project                   # Absolute or relative path
+    tag: Full-Stack Web Application               # Optional track or badge
+    repo_url: https://github.com/yourusername/my-project  # Optional repo link
+    live_url: https://myproject.com              # Optional live URL
+    deployed: true                               # true if deployed, false if in-repo
+    primary_stack:                               # Populated via `git-resume auto-config`
+      - Python
+      - FastAPI
+      - React
+      - TypeScript
+
+# Resume Personas & Target Documents (Word .docx templates)
+personas:
+  - id: fullstack
+    title: Full-Stack Software Engineer
+    resume_file: FullStack_Resume.docx           # Located inside output.resume_dir
+    emphasis:
+      - full-stack
+      - distributed-systems
+      - cloud
+
+# Output directories for compiled resumes
+output:
+  formats:
+    - docx
+    - pdf
+  resume_dir: ./resumes                          # Folder containing master .docx templates
+  sync_paths:                                    # Optional folders to sync (e.g. portfolio site)
+    - ./portfolio_site/public/resume
+  # When true, committing in one repo only updates that project's section. Default: false.
+  scoped_sync: false
+
+# LLM Intelligence Engine for bullet synthesis
+llm:
+  provider: ollama                               # ollama | openai | gemini
+  model: qwen2.5-coder:7b                        # or kimi-k2.7-code, deepseek-v4-pro, gpt-4o-mini
+  fallback_model: gpt-4o-mini
+"""
+
+@app.command()
+def init(
+    output_path: str = typer.Option("gitresume.yaml", "--output", "-o", help="Destination path for new gitresume.yaml"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing configuration file if it exists")
+):
+    """Generate a starter gitresume.yaml configuration template in the current directory."""
+    if os.path.exists(output_path) and not force:
+        console.print(f"[yellow]⚠ Configuration file '{output_path}' already exists. Use --force to overwrite.[/yellow]")
+        raise typer.Exit(0)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(STARTER_CONFIG_YAML)
+
+    console.print(f"[bold green]✓ Created starter configuration at {output_path}[/bold green]")
+    console.print(f"[dim]Next steps:[/dim]")
+    console.print(f"  1. Edit [cyan]{output_path}[/cyan] with your repository paths.")
+    console.print(f"  2. Run [cyan]git-resume auto-config[/cyan] to detect tech stacks.")
+    console.print(f"  3. Run [cyan]git-resume install-hooks[/cyan] to enable zero-touch automation.")
+
 @app.command()
 def auto_config(config_path: str = "gitresume.yaml"):
     """Auto-discover project tracks, tags, and tech stack from README.md & manifests, updating gitresume.yaml."""

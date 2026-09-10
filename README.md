@@ -5,7 +5,7 @@
 [![CLI](https://img.shields.io/badge/CLI-Typer%20%26%20Rich-magenta.svg)](https://typer.tiangolo.com/)
 [![Multi--Agent](https://img.shields.io/badge/Architecture-Autonomous%20Agentic%20Pipeline-orange.svg)](https://github.com/Naman6019/git-resume-agent)
 [![Ollama](https://img.shields.io/badge/LLM-Ollama%20Cloud%20%7C%20Local-purple.svg)](https://ollama.com)
-[![Tests](https://img.shields.io/badge/Tests-8%2F8%20Passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-9%2F9%20Passing-brightgreen.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > **Autonomous Git-Driven Resume & Portfolio Agent**  
@@ -112,8 +112,15 @@ pip install -e .
 
 </details>
 
-### 2. Configure Environment (Optional LLM Keys)
-Copy `.env.example` to `.env`:
+### 2. Initialize Starter Configuration
+Scaffold a starter `gitresume.yaml` in your project folder with one command:
+```bash
+git-resume init
+```
+*(Creates a clean, annotated template ready for your projects, resume paths, and personas).*
+
+### 3. Configure Environment (Optional LLM Keys)
+Copy `.env.example` to `.env` (or set system environment variables):
 ```env
 # Option A: Ollama Cloud (Uses flagship cloud models without local download)
 OLLAMA_BASE_URL=https://ollama.com
@@ -126,9 +133,29 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
+### 4. Wire Repositories & Enable Autonomy
+```bash
+# Detect tech stacks & tools automatically from repository READMEs & package manifests
+git-resume auto-config
+
+# Install zero-touch post-commit hooks across all tracked repositories
+git-resume install-hooks
+
+# Run first end-to-end resume sync
+git-resume sync
+```
+
 ---
 
 ## 🕹️ CLI Usage & Core Workflows
+
+### 0. Generate Starter Configuration
+Generate a starter `gitresume.yaml` configuration template in the current directory:
+```bash
+git-resume init
+# Or specify a custom output path:
+git-resume init --output ./my-config.yaml
+```
 
 ### 1. Live Codebase Intelligence Dashboard
 Displays real-time commit counts, file statistics, total lines of code, test suites, and deployment status across all tracked repositories:
@@ -334,6 +361,77 @@ GitResume Agent automatically embeds native Word OpenPackaging XML hyperlinks (`
 
 ## ⚙️ Configuration (`gitresume.yaml`)
 
+### 🔍 How GitResume Locates Your Configuration
+You do not need to manually specify the configuration path for every command. GitResume automatically locates `gitresume.yaml` using a multi-layer fallback search:
+1. **Current Working Directory**: `./gitresume.yaml` or `./.gitresume.yaml`
+2. **Parent Directories**: Automatically traverses upward to locate `gitresume.yaml` anywhere in your workspace.
+3. **Environment Variable**: `GITRESUME_CONFIG=/path/to/gitresume.yaml`
+4. **Git Repository Config**: `git config gitresume.config /path/to/gitresume.yaml` (registered automatically during `install-hooks`).
+5. **User Home Directory**: `~/.config/git-resume/gitresume.yaml` or `~/.gitresume.yaml`
+6. **CLI Override**: Pass `--config-path` / `-c` to any command.
+
+---
+
+### 🟢 Minimal Starter Configuration
+Run `git-resume init` to generate this starter configuration automatically, or create `gitresume.yaml` manually:
+
+```yaml
+version: "1.0"
+
+# [REQUIRED] Developer profile information
+developer:
+  name: "Your Name"
+  email: "you@example.com"
+  github: "https://github.com/yourusername"
+  linkedin: "https://linkedin.com/in/yourprofile"  # [Optional]
+  location: "San Francisco, CA"                   # [Optional]
+
+# [REQUIRED] Repositories to inspect, ground, and track
+repositories:
+  - name: MyProject                               # [Required] Display name
+    path: ./projects/my-project                   # [Required] Absolute path or relative to gitresume.yaml
+    tag: Full-Stack Web Application               # [Optional] Hackathon track, badge, or subtitle
+    repo_url: https://github.com/user/my-project  # [Optional] GitHub repository URL
+    live_url: https://myproject.com              # [Optional] Live deployment link (if deployed)
+    deployed: true                               # [Optional] true if live, false if in-repo
+    primary_stack:                               # [Optional] Auto-populated via `git-resume auto-config`
+      - Python
+      - FastAPI
+      - React
+      - TypeScript
+
+# [REQUIRED] Target resumes to compile (Word .docx files in output.resume_dir)
+personas:
+  - id: fullstack
+    title: Full-Stack Software Engineer
+    resume_file: FullStack_Resume.docx           # Master template filename inside output.resume_dir
+    emphasis:
+      - full-stack
+      - distributed-systems
+      - cloud
+
+# [REQUIRED] Dual-Tier Storage & Compilation Targets
+output:
+  formats:
+    - docx
+    - pdf
+  resume_dir: ./resumes                          # [Required] Folder containing master .docx templates
+  sync_paths:                                    # [Optional] Public web/portfolio folders to mirror to
+    - ./portfolio_site/public/resume
+  scoped_sync: false                             # [Optional] Only update changed repo's section (default: false)
+
+# [OPTIONAL] LLM Intelligence Engine for achievement bullet synthesis
+llm:
+  provider: ollama                               # ollama | openai | gemini (default: ollama)
+  model: qwen2.5-coder:7b                        # or kimi-k2.7-code, deepseek-v4-pro, gpt-4o-mini
+  fallback_model: gpt-4o-mini
+```
+
+---
+
+### 📑 Production Multi-Persona Reference Configuration
+The following reference shows a multi-repo, multi-persona production setup with 1-page targeted resumes and a 2-page master resume:
+
 ```yaml
 version: "1.0"
 
@@ -475,21 +573,31 @@ llm:
 
 ## 🪝 Zero-Touch Git Hook Integration
 
-How does the automation work on every commit?
-When you run `git-resume install-hooks` (or `python scripts/install_hooks.py`):
+### How It Works Under the Hood
+When you run `git-resume install-hooks`:
 1. It reads your configured repository paths in `gitresume.yaml`.
 2. Locates each repository's `.git/hooks/` folder.
-3. Installs an executable `post-commit` script that triggers `git-resume sync` in the background upon every commit (plus `sync-descriptions`, which checks that repo's `README.md` for portfolio-worthy changes).
+3. Installs an executable `post-commit` script that triggers `git-resume sync` in the background upon every commit (plus `sync-descriptions` to keep portfolio prose in sync with READMEs).
+4. Sets `git config gitresume.config <path>` inside each tracked repository so `git-resume` always knows where to find its master configuration, no matter where git was executed.
 
+### CLI Hook Commands:
 ```bash
+# 1. Preview hook status and git remotes across all repositories without installing:
+git-resume install-hooks --list
+
+# 2. Install hooks across all repositories defined in gitresume.yaml:
 git-resume install-hooks
+
+# 3. Install a hook for one specific repository (by name or path):
+git-resume install-hooks --repo MyProject
 ```
+
 *Output:*
 ```
 🔧 Installing Git post-commit hooks...
-  * ✓ Installed hook for [EnterpriseAI]: ./projects/EnterpriseAI
-  * ✓ Installed hook for [AgentOS]: ./projects/AgentOS
-✅ Successfully installed hooks across 2 repositories!
+  * ✓ Installed hook & registered config for [EnterpriseAI]: ./projects/EnterpriseAI
+  * ✓ Installed hook & registered config for [AgentOS]: ./projects/AgentOS
+✅ Successfully configured hooks across 2 repositories!
 ```
 
 ---
@@ -542,16 +650,17 @@ Run the automated unit test suite:
 pytest tests/ -v
 ```
 ```
-collected 8 items
-tests/test_git_resume.py::test_load_config PASSED                         [ 12%]
-tests/test_git_resume.py::test_inspector_agent PASSED                     [ 25%]
-tests/test_git_resume.py::test_grounding_verifier PASSED                  [ 37%]
-tests/test_git_resume.py::test_synthesizer_agent PASSED                   [ 50%]
-tests/test_git_resume.py::test_schema_discoverer PASSED                   [ 62%]
-tests/test_git_resume.py::test_find_config_path_and_git_utils PASSED      [ 75%]
-tests/test_git_resume.py::test_master_personas_config_and_compiler PASSED [ 87%]
-tests/test_git_resume.py::test_scoped_update_resume PASSED                [100%]
-====================== 8 passed in 1.22s ======================
+collected 9 items
+tests/test_git_resume.py::test_load_config PASSED                         [ 11%]
+tests/test_git_resume.py::test_inspector_agent PASSED                     [ 22%]
+tests/test_git_resume.py::test_grounding_verifier PASSED                  [ 33%]
+tests/test_git_resume.py::test_synthesizer_agent PASSED                   [ 44%]
+tests/test_git_resume.py::test_schema_discoverer PASSED                   [ 55%]
+tests/test_git_resume.py::test_find_config_path_and_git_utils PASSED      [ 66%]
+tests/test_git_resume.py::test_master_personas_config_and_compiler PASSED [ 77%]
+tests/test_git_resume.py::test_scoped_update_resume PASSED                [ 88%]
+tests/test_git_resume.py::test_init_command PASSED                        [100%]
+====================== 9 passed in 1.41s ======================
 ```
 
 ---
